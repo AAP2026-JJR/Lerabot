@@ -1,42 +1,39 @@
-# lerabot
+﻿# LERABOT
 
-This template should help get you started developing with Vue 3 in Vite.
+Plataforma web multiusuario para consultar y consolidar balances, activos, operaciones y rendimiento de distintos exchanges.
 
-## Recommended IDE Setup
+## Estado
+Fase 1: base del proyecto. Las integraciones con exchanges y la infraestructura AWS aun no estan implementadas.
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## Tecnologias
+- Frontend: Vue 3, TypeScript, Vite.
+- Backend previsto: AWS Lambda (TypeScript), API Gateway y almacenamiento AWS.
+- Autenticacion prevista: Amazon Cognito.
+- Despliegue previsto: AWS Amplify vinculado a GitHub.
 
-## Recommended Browser Setup
-
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
-
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
+## Iniciar
+```bash
 npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
 npm run dev
-```
-
-### Type-Check, Compile and Minify for Production
-
-```sh
 npm run build
 ```
+
+## Arquitectura
+- `src/App.vue`, `src/main.ts`, `src/assets/`: entrada y estilos Vue.
+- `src/componentes/`: componentes visuales reutilizables (comunes, estructura, graficos, tablas).
+- `src/vistas/`: paginas principales (dashboard, exchanges, activos, trades, movimientos, reportes, ajustes).
+- `src/rutas/`: definicion de rutas; se implementara cuando se instale Vue Router.
+- `src/estado/`: estado compartido; se implementara al incorporar Pinia.
+- `src/servicios/`: clientes HTTP hacia el API Gateway, nunca hacia exchanges privados.
+- `src/reutilizables/`: logica reutilizable (composables).
+- `src/tipos/`: interfaces y tipos TypeScript.
+- `src/utilidades/`: funciones puras de formato/calculo.
+- `backend/funciones/`: handlers Lambda separados por responsabilidad.
+- `backend/compartido/proveedores/`: adaptadores de Binance, BingX, Bybit, etc.
+- `backend/infraestructura/`: IaC futura.
+
+## Criterios
+- Las carpetas funcionales se nombran en espanol sin tildes, y se preservan las convenciones tecnicas obligatorias (`src`, `assets`, `App.vue`, etc.).
+- Nunca guardar API Keys de exchanges en frontend, variables `VITE_` o GitHub.
+- Las operaciones sobre exchanges seran inicialmente **solo lectura**.
+- Los balances entre exchanges se consolidaran sin duplicar transferencias internas.

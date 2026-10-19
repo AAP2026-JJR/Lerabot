@@ -1,47 +1,42 @@
+
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
+  <main class="app-container">
+    <div class="welcome">
+      <h1>LERABOT</h1>
+      <p>Plataforma de gestión de inversiones en criptomonedas</p>
+      <span>Proyecto inicializado correctamente</span>
     </div>
-  </header>
-
-  <main>
-    <TheWelcome />
   </main>
 </template>
 
 <style scoped>
-header {
-  line-height: 1.5;
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+.welcome {
+  text-align: center;
 }
 
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
+h1 {
+  font-size: 3rem;
+  font-weight: 700;
+  color: #2563eb;
+}
 
-  .logo {
-    margin: 0 2rem 0 0;
-  }
+p {
+  margin: 12px 0;
+  color: #64748b;
+}
 
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
+span {
+  font-size: 0.875rem;
+  color: #16a34a;
 }
 </style>
