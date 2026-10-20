@@ -6,6 +6,7 @@ const emit = defineEmits<{ cerrar: [] }>()
 
 const opciones = [
   { ruta: '/dashboard', titulo: 'Dashboard', icono: '▦' },
+  { ruta: '/mercado', titulo: 'Mercado', icono: '◉' },
   { ruta: '/exchanges', titulo: 'Exchanges', icono: '⇄' },
   { ruta: '/portafolio', titulo: 'Portafolio', icono: '◈' },
   { ruta: '/operaciones', titulo: 'Operaciones', icono: '↗' },

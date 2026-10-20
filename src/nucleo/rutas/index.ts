@@ -11,6 +11,7 @@ const router = createRouter({
         { path: '', redirect: '/dashboard' },
         { path: 'componentes', name: 'componentes', component: () => import('@/modulos/dashboard/GaleriaComponentesView.vue'), meta: { titulo: 'Galería de componentes' } },
         { path: 'dashboard', name: 'dashboard', component: () => import('@/modulos/dashboard/DashboardView.vue'), meta: { titulo: 'Dashboard' } },
+        { path: 'mercado', name: 'mercado', component: () => import('@/modulos/mercado/MercadoView.vue'), meta: { titulo: 'Mercado' } },
         { path: 'exchanges', name: 'exchanges', component: () => import('@/modulos/exchanges/ExchangesView.vue'), meta: { titulo: 'Exchanges' } },
         { path: 'portafolio', name: 'portafolio', component: () => import('@/modulos/portafolio/PortafolioView.vue'), meta: { titulo: 'Portafolio' } },
         { path: 'operaciones', name: 'operaciones', component: () => import('@/modulos/operaciones/OperacionesView.vue'), meta: { titulo: 'Operaciones' } },
