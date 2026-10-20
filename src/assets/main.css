@@ -1,1 +1,3 @@
-@import './base.css';
+@import "tailwindcss";
+@import "./estilos/tema.css";
+@import "./base.css";
