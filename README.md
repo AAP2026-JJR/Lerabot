@@ -11,6 +11,12 @@ Fase 1: base del proyecto. Las integraciones con exchanges y la infraestructura 
 - Autenticacion prevista: Amazon Cognito.
 - Despliegue previsto: AWS Amplify vinculado a GitHub.
 
+Scrip correr info de proyecto
+```bash
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Exportar-Contexto-Lerabot.ps1
+```
+
+
 ## Iniciar
 ```bash
 npm install
