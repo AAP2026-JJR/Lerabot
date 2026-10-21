@@ -12,6 +12,7 @@ const opciones = [
   { ruta: '/operaciones', titulo: 'Operaciones', icono: '↗' },
   { ruta: '/reportes', titulo: 'Reportes', icono: '▤' },
   { ruta: '/configuracion', titulo: 'Configuración', icono: '⚙' },
+  { ruta: '/auditoria', titulo: 'Auditoría', icono: '▤' },
 ]
 </script>
 
