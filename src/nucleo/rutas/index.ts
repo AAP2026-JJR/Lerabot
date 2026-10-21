@@ -16,6 +16,7 @@ const router = createRouter({
         { path: 'portafolio', name: 'portafolio', component: () => import('@/modulos/portafolio/PortafolioView.vue'), meta: { titulo: 'Portafolio' } },
         { path: 'operaciones', name: 'operaciones', component: () => import('@/modulos/operaciones/OperacionesView.vue'), meta: { titulo: 'Operaciones' } },
         { path: 'reportes', name: 'reportes', component: () => import('@/modulos/reportes/ReportesView.vue'), meta: { titulo: 'Reportes' } },
+        { path: 'auditoria', name: 'auditoria', component: () => import('@/modulos/auditoria/AuditoriaView.vue'), meta: { titulo: 'Auditoría' } },
         { path: 'configuracion', name: 'configuracion', component: () => import('@/modulos/configuracion/ConfiguracionView.vue'), meta: { titulo: 'Configuración' } },
       ],
     },

@@ -1,0 +1,58 @@
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue'
+import { listarEventos, obtenerResumen, leerEvento } from './servicio'
+import type { EventoAuditoria, ResumenAuditoria } from './tipos'
+const eventos = ref<EventoAuditoria[]>([])
+const resumen = ref<ResumenAuditoria | null>(null)
+const cargando = ref(false)
+const error = ref('')
+const cursor = ref('')
+const siguienteCursor = ref('')
+const historico = ref<string[]>([])
+const estado = ref('')
+const fuente = ref('')
+const simbolo = ref('')
+const texto = ref('')
+const seleccion = ref<EventoAuditoria | null>(null)
+const seccion = ref<'todos' | 'enrutados' | 'rechazos' | 'exitos'>('todos')
+const totalVisible = computed(() => eventos.value.length)
+const pestañas: { id: 'todos' | 'enrutados' | 'rechazos' | 'exitos'; nombre: string }[] = [{id:'todos',nombre:'Todos'},{id:'enrutados',nombre:'Enrutados'},{id:'rechazos',nombre:'Rechazados'},{id:'exitos',nombre:'SUCCESS'}]
+const fecha = (valor: unknown) => { if (!valor) return '—'; const d = new Date(String(valor)); return Number.isNaN(d.getTime()) ? String(valor) : d.toLocaleString('es-PE') }
+const colorEstado = (valor: unknown) => { const s = String(valor || '').toUpperCase(); if (s.includes('REJECT') || s.includes('FAIL') || s.includes('ERROR')) return 'bg-red-50 text-red-700'; if (s.includes('SUCCESS')) return 'bg-emerald-50 text-emerald-700'; if (s.includes('ROUTED')) return 'bg-amber-50 text-amber-800'; return 'bg-slate-100 text-slate-700' }
+const detalleTexto = computed(() => {if (!seleccion.value) return ''; const d = seleccion.value.details; if (typeof d === 'string') { try { return JSON.stringify(JSON.parse(d), null, 2) } catch { return d } } return JSON.stringify(d ?? seleccion.value, null, 2) })
+async function cargar(reset = false) {
+  if (reset) { cursor.value = ''; historico.value = []; siguienteCursor.value = '' }
+  cargando.value = true; error.value = ''
+  try {
+    const filtroEstado = seccion.value === 'enrutados' ? 'PASS_RULES_ROUTED' : seccion.value === 'rechazos' ? 'REJECTED' : seccion.value === 'exitos' ? 'SUCCESS' : estado.value
+    const r = await listarEventos({ limite: '30', cursor: cursor.value, estado: filtroEstado, fuente: fuente.value, simbolo: simbolo.value, buscar: texto.value })
+    eventos.value = r.eventos; siguienteCursor.value = r.siguienteCursor ?? ''
+  } catch(e) { error.value = e instanceof Error ? e.message : 'Error de consulta'; eventos.value = [] }
+  finally { cargando.value = false }
+}
+async function cargarResumen() { try { resumen.value = await obtenerResumen() } catch { /* table not connected yet */ } }
+async function seleccionar(e: EventoAuditoria) { seleccion.value = e; try { const r = await leerEvento(e.PK,e.SK); seleccion.value = r.evento } catch { /* use list record */ } }
+function siguiente() {if (!siguienteCursor.value) return; historico.value.push(cursor.value); cursor.value = siguienteCursor.value; void cargar() }
+function anterior() {cursor.value = historico.value.pop() ?? ''; void cargar() }
+function exportar() {
+  const cols = ['createdAt','status','source','eventType','symbol','tradeType','operationId','signalId','message']
+  const csv = [cols.join(','), ...eventos.value.map(e => cols.map(k => '"'+String(e[k]??'').replace(/"/g,'""')+'"').join(','))].join('\r\n')
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'})); a.download='lerabot-auditoria.csv'; a.click(); URL.revokeObjectURL(a.href)
+}
+watch(seccion, () => void cargar(true))
+onMounted(() => { void cargar(true); void cargarResumen() })
+</script>
+<template>
+  <div class="space-y-5 text-[#102c37]">
+    <header class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="text-2xl font-bold">Auditoría de Trading</h2><p class="text-sm text-slate-500">Trazabilidad de señales, validaciones y eventos de ejecución registrados en DynamoDB.</p></div><span class="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">Enrutado ≠ ejecutado</span></header>
+    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div v-for="k in ['Total de eventos','Enrutados','Rechazados','SUCCESS']" :key="k" class="rounded-2xl border border-[#e3ebe8] bg-white p-4"><p class="text-xs text-slate-500">{{ k }}</p><p class="mt-2 text-2xl font-bold">{{ resumen ? (k==='Total de eventos' ? resumen.total : resumen.porEstado[k==='Enrutados' ? 'PASS_RULES_ROUTED' : k==='Rechazados' ? 'REJECTED' : 'SUCCESS'] ?? 0) : '—' }}</p></div>
+    </div>
+    <p v-if="resumen?.parcial" class="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Resumen parcial: se analizaron {{ resumen.examinados }} registros. No se presenta como total histórico completo.</p>
+    <nav class="flex flex-wrap gap-2" aria-label="Vistas de auditoría"><button v-for="s in pestañas" :key="s.id" @click="seccion=s.id" class="rounded-xl border px-4 py-2 text-sm" :class="seccion===s.id?'bg-[#e1f4ef] text-[#00856a] border-[#00856a]':'bg-white border-slate-200'">{{s.nombre}}</button></nav>
+    <section class="rounded-2xl border border-[#e3ebe8] bg-white p-4"><div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5"><label class="text-xs text-slate-500">Estado<input v-model="estado" placeholder="Ej. SUCCESS" class="mt-1 w-full rounded-lg border p-2 text-sm" :disabled="seccion!=='todos'"></label><label class="text-xs text-slate-500">Fuente<input v-model="fuente" placeholder="signal-orchestrator" class="mt-1 w-full rounded-lg border p-2 text-sm"></label><label class="text-xs text-slate-500">Símbolo<input v-model="simbolo" placeholder="XRPUSDT" class="mt-1 w-full rounded-lg border p-2 text-sm"></label><label class="text-xs text-slate-500">Buscar por ID / mensaje<input v-model="texto" placeholder="operationId, signalId..." class="mt-1 w-full rounded-lg border p-2 text-sm"></label><div class="flex items-end gap-2"><button class="rounded-lg bg-[#00856a] px-4 py-2 text-sm font-semibold text-white" @click="cargar(true)">Filtrar</button><button class="rounded-lg border px-3 py-2 text-sm" @click="exportar">CSV</button></div></div></section>
+    <p v-if="error" role="alert" class="rounded-xl bg-red-50 p-4 text-sm text-red-700">{{ error }}. Revisa la URL, CORS y permisos IAM de la Lambda.</p>
+    <section class="overflow-hidden rounded-2xl border border-[#e3ebe8] bg-white"><div class="flex items-center justify-between p-4"><div><h3 class="font-bold">Eventos de auditoría</h3><p class="text-xs text-slate-500">{{ totalVisible }} en esta página · Pulsa un registro para abrir sus detalles</p></div><button class="rounded-lg border px-3 py-2 text-xs" @click="cargar(false)">Actualizar</button></div><div class="overflow-x-auto"><table class="w-full min-w-[930px] text-left text-xs"><thead class="bg-[#f5f8f7] text-slate-500"><tr><th class="p-3">Fecha</th><th class="p-3">Estado</th><th class="p-3">Fuente</th><th class="p-3">Evento</th><th class="p-3">Símbolo</th><th class="p-3">Tipo</th><th class="p-3">Mensaje</th><th class="p-3"></th></tr></thead><tbody><tr v-for="(e,i) in eventos" :key="e.PK+'-'+e.SK+'-'+i" class="border-t hover:bg-slate-50"><td class="whitespace-nowrap p-3">{{fecha(e.createdAt)}}</td><td class="p-3"><span class="rounded-lg px-2 py-1 font-medium" :class="colorEstado(e.status)">{{e.status || 'Sin estado'}}</span></td><td class="p-3">{{e.source || '—'}}</td><td class="p-3">{{e.eventType || '—'}}</td><td class="p-3">{{e.symbol || '—'}}</td><td class="p-3">{{e.tradeType || '—'}}</td><td class="max-w-[250px] truncate p-3" :title="String(e.message??'')">{{e.message || '—'}}</td><td class="p-3"><button @click="seleccionar(e)" class="font-semibold text-[#00856a]">Detalle</button></td></tr><tr v-if="!eventos.length"><td colspan="8" class="p-8 text-center text-slate-500">{{cargando?'Cargando eventos...':'No hay eventos para mostrar'}}</td></tr></tbody></table></div><footer class="flex items-center justify-end gap-2 p-4"><button :disabled="!historico.length||cargando" class="rounded-lg border px-3 py-2 text-xs disabled:opacity-40" @click="anterior">Anterior</button><button :disabled="!siguienteCursor||cargando" class="rounded-lg border px-3 py-2 text-xs disabled:opacity-40" @click="siguiente">Siguiente</button></footer></section>
+    <section v-if="seleccion" class="rounded-2xl border border-[#e3ebe8] bg-white p-4"><div class="flex justify-between"><div><h3 class="font-bold">Detalle del evento</h3><p class="text-xs text-slate-500">{{seleccion.PK}} / {{seleccion.SK}}</p></div><button @click="seleccion=null" class="text-sm text-[#00856a]">Cerrar</button></div><div class="mt-4 grid gap-2 text-sm sm:grid-cols-2"><p><b>Estado:</b> {{seleccion.status || '—'}}</p><p><b>Origen:</b> {{seleccion.source || '—'}}</p><p><b>operationId:</b> {{seleccion.operationId || '—'}}</p><p><b>signalId:</b> {{seleccion.signalId || '—'}}</p><p><b>Ejecutado:</b> {{seleccion.executed ?? 'No documentado'}}</p><p><b>Trades:</b> {{seleccion.tradesCount ?? 'No documentado'}}</p></div><p class="mt-3 text-xs text-amber-700">PASS_RULES_ROUTED solo certifica enrutamiento; no una orden completada.</p><pre class="mt-3 max-h-[440px] overflow-auto rounded-xl bg-slate-950 p-4 text-xs text-emerald-100">{{detalleTexto}}</pre></section>
+  </div>
+</template>
