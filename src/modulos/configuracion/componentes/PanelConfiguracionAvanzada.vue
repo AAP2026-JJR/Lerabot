@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, toRaw } from 'vue'
 import InterruptorConfiguracion from './InterruptorConfiguracion.vue'
 import { opcionesTimeframe, type ConfiguracionGlobal, type PuntoConexion } from '../datos/configuracion-catalogo'
 const props = defineProps<{ modelValue: ConfiguracionGlobal; seccion: 'exchanges' | 'riesgos' | 'sistema' }>()
 const emit = defineEmits<{ 'update:modelValue': [valor: ConfiguracionGlobal] }>()
 const modelo = computed(() => props.modelValue)
 function modificar(cambio: (c: ConfiguracionGlobal) => void) {
-  const copia: ConfiguracionGlobal = structuredClone(props.modelValue)
+  const copia: ConfiguracionGlobal = structuredClone(toRaw(props.modelValue))
   cambio(copia)
   emit('update:modelValue', copia)
 }

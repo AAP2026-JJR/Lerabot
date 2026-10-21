@@ -10,9 +10,8 @@ export class ErrorConfiguracion extends Error {
   constructor(public readonly codigo: number, mensaje: string) { super(mensaje) }
 }
 function endpoint(): string {
-  const url = import.meta.env.VITE_CONFIGURACION_API_URL as string | undefined
-  if (!url) throw new ErrorConfiguracion(0, 'Configura VITE_CONFIGURACION_API_URL')
-  return url
+  const configurado = (import.meta.env.VITE_CONFIGURACION_API_URL as string | undefined)?.trim()
+  return configurado || 'https://fnpeg3edxj.execute-api.sa-east-1.amazonaws.com/prd/configuracion'
 }
 async function peticion(metodo: 'GET' | 'PUT', body?: object): Promise<DocumentoConfiguracion> {
   let respuesta: Response
