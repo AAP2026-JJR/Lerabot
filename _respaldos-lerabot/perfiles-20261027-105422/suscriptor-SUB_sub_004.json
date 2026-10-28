@@ -1,0 +1,747 @@
+{
+    "displayName":  {
+                        "S":  "Maycol guevara"
+                    },
+    "updatedAt":  {
+                      "S":  "2026-10-20T00:22:54.293Z"
+                  },
+    "status":  {
+                   "S":  "active"
+               },
+    "contact":  {
+                    "M":  {
+                              "email":  {
+                                            "S":  ""
+                                        },
+                              "mobilePhone":  {
+                                                  "S":  ""
+                                              },
+                              "notifications":  {
+                                                    "M":  {
+                                                              "enabled":  {
+                                                                              "BOOL":  false
+                                                                          },
+                                                              "channels":  {
+                                                                               "L":  [
+
+                                                                                     ]
+                                                                           }
+                                                          }
+                                                }
+                          }
+                },
+    "subscriberId":  {
+                         "S":  "sub_004"
+                     },
+    "createdAt":  {
+                      "S":  "2026-10-20T00:22:54.293Z"
+                  },
+    "PK":  {
+               "S":  "SUB#sub_004"
+           },
+    "tradingPreferences":  {
+                               "M":  {
+                                         "futures":  {
+                                                         "M":  {
+                                                                   "enabled":  {
+                                                                                   "BOOL":  true
+                                                                               },
+                                                                   "symbols":  {
+                                                                                   "M":  {
+                                                                                             "BTCUSDT":  {
+                                                                                                             "M":  {
+                                                                                                                       "enabled":  {
+                                                                                                                                       "BOOL":  true
+                                                                                                                                   },
+                                                                                                                       "timeframes":  {
+                                                                                                                                          "M":  {
+                                                                                                                                                    "60":  {
+                                                                                                                                                               "M":  {
+                                                                                                                                                                         "enabled":  {
+                                                                                                                                                                                         "BOOL":  true
+                                                                                                                                                                                     },
+                                                                                                                                                                         "leverage":  {
+                                                                                                                                                                                          "N":  "20"
+                                                                                                                                                                                      },
+                                                                                                                                                                         "balancePercent":  {
+                                                                                                                                                                                                "N":  "15"
+                                                                                                                                                                                            },
+                                                                                                                                                                         "riskPercent":  {
+                                                                                                                                                                                             "N":  "1"
+                                                                                                                                                                                         },
+                                                                                                                                                                         "tpDistribution":  {
+                                                                                                                                                                                                "L":  [
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "N":  "0.6"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "N":  "0.4"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "NULL":  true
+                                                                                                                                                                                                          }
+                                                                                                                                                                                                      ]
+                                                                                                                                                                                            }
+                                                                                                                                                                     }
+                                                                                                                                                           },
+                                                                                                                                                    "120":  {
+                                                                                                                                                                "M":  {
+                                                                                                                                                                          "enabled":  {
+                                                                                                                                                                                          "BOOL":  true
+                                                                                                                                                                                      },
+                                                                                                                                                                          "leverage":  {
+                                                                                                                                                                                           "N":  "20"
+                                                                                                                                                                                       },
+                                                                                                                                                                          "balancePercent":  {
+                                                                                                                                                                                                 "N":  "50"
+                                                                                                                                                                                             },
+                                                                                                                                                                          "riskPercent":  {
+                                                                                                                                                                                              "N":  "1.2"
+                                                                                                                                                                                          },
+                                                                                                                                                                          "tpDistribution":  {
+                                                                                                                                                                                                 "L":  [
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "N":  "0.7"
+                                                                                                                                                                                                           },
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "N":  "0.3"
+                                                                                                                                                                                                           },
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "NULL":  true
+                                                                                                                                                                                                           }
+                                                                                                                                                                                                       ]
+                                                                                                                                                                                             }
+                                                                                                                                                                      }
+                                                                                                                                                            },
+                                                                                                                                                    "240":  {
+                                                                                                                                                                "M":  {
+                                                                                                                                                                          "enabled":  {
+                                                                                                                                                                                          "BOOL":  true
+                                                                                                                                                                                      },
+                                                                                                                                                                          "leverage":  {
+                                                                                                                                                                                           "N":  "15"
+                                                                                                                                                                                       },
+                                                                                                                                                                          "balancePercent":  {
+                                                                                                                                                                                                 "N":  "50"
+                                                                                                                                                                                             },
+                                                                                                                                                                          "riskPercent":  {
+                                                                                                                                                                                              "N":  "1.2"
+                                                                                                                                                                                          },
+                                                                                                                                                                          "tpDistribution":  {
+                                                                                                                                                                                                 "L":  [
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "N":  "0.8"
+                                                                                                                                                                                                           },
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "N":  "0.2"
+                                                                                                                                                                                                           },
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "NULL":  true
+                                                                                                                                                                                                           }
+                                                                                                                                                                                                       ]
+                                                                                                                                                                                             }
+                                                                                                                                                                      }
+                                                                                                                                                            }
+                                                                                                                                                }
+                                                                                                                                      },
+                                                                                                                       "exchanges":  {
+                                                                                                                                         "L":  [
+                                                                                                                                                   {
+                                                                                                                                                       "S":  "bingx"
+                                                                                                                                                   }
+                                                                                                                                               ]
+                                                                                                                                     }
+                                                                                                                   }
+                                                                                                         },
+                                                                                             "ETHUSDT":  {
+                                                                                                             "M":  {
+                                                                                                                       "enabled":  {
+                                                                                                                                       "BOOL":  true
+                                                                                                                                   },
+                                                                                                                       "timeframes":  {
+                                                                                                                                          "M":  {
+                                                                                                                                                    "60":  {
+                                                                                                                                                               "M":  {
+                                                                                                                                                                         "enabled":  {
+                                                                                                                                                                                         "BOOL":  true
+                                                                                                                                                                                     },
+                                                                                                                                                                         "leverage":  {
+                                                                                                                                                                                          "N":  "20"
+                                                                                                                                                                                      },
+                                                                                                                                                                         "balancePercent":  {
+                                                                                                                                                                                                "N":  "15"
+                                                                                                                                                                                            },
+                                                                                                                                                                         "riskPercent":  {
+                                                                                                                                                                                             "N":  "1"
+                                                                                                                                                                                         },
+                                                                                                                                                                         "tpDistribution":  {
+                                                                                                                                                                                                "L":  [
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "N":  "0.6"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "N":  "0.4"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "NULL":  true
+                                                                                                                                                                                                          }
+                                                                                                                                                                                                      ]
+                                                                                                                                                                                            }
+                                                                                                                                                                     }
+                                                                                                                                                           },
+                                                                                                                                                    "120":  {
+                                                                                                                                                                "M":  {
+                                                                                                                                                                          "enabled":  {
+                                                                                                                                                                                          "BOOL":  true
+                                                                                                                                                                                      },
+                                                                                                                                                                          "leverage":  {
+                                                                                                                                                                                           "N":  "20"
+                                                                                                                                                                                       },
+                                                                                                                                                                          "balancePercent":  {
+                                                                                                                                                                                                 "N":  "50"
+                                                                                                                                                                                             },
+                                                                                                                                                                          "riskPercent":  {
+                                                                                                                                                                                              "N":  "1.2"
+                                                                                                                                                                                          },
+                                                                                                                                                                          "tpDistribution":  {
+                                                                                                                                                                                                 "L":  [
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "N":  "0.7"
+                                                                                                                                                                                                           },
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "N":  "0.3"
+                                                                                                                                                                                                           },
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "NULL":  true
+                                                                                                                                                                                                           }
+                                                                                                                                                                                                       ]
+                                                                                                                                                                                             }
+                                                                                                                                                                      }
+                                                                                                                                                            },
+                                                                                                                                                    "240":  {
+                                                                                                                                                                "M":  {
+                                                                                                                                                                          "enabled":  {
+                                                                                                                                                                                          "BOOL":  true
+                                                                                                                                                                                      },
+                                                                                                                                                                          "leverage":  {
+                                                                                                                                                                                           "N":  "15"
+                                                                                                                                                                                       },
+                                                                                                                                                                          "balancePercent":  {
+                                                                                                                                                                                                 "N":  "20"
+                                                                                                                                                                                             },
+                                                                                                                                                                          "riskPercent":  {
+                                                                                                                                                                                              "N":  "1.2"
+                                                                                                                                                                                          },
+                                                                                                                                                                          "tpDistribution":  {
+                                                                                                                                                                                                 "L":  [
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "N":  "0.8"
+                                                                                                                                                                                                           },
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "N":  "0.2"
+                                                                                                                                                                                                           },
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "NULL":  true
+                                                                                                                                                                                                           }
+                                                                                                                                                                                                       ]
+                                                                                                                                                                                             }
+                                                                                                                                                                      }
+                                                                                                                                                            }
+                                                                                                                                                }
+                                                                                                                                      },
+                                                                                                                       "exchanges":  {
+                                                                                                                                         "L":  [
+                                                                                                                                                   {
+                                                                                                                                                       "S":  "bingx"
+                                                                                                                                                   }
+                                                                                                                                               ]
+                                                                                                                                     }
+                                                                                                                   }
+                                                                                                         },
+                                                                                             "XRPUSDT":  {
+                                                                                                             "M":  {
+                                                                                                                       "enabled":  {
+                                                                                                                                       "BOOL":  true
+                                                                                                                                   },
+                                                                                                                       "timeframes":  {
+                                                                                                                                          "M":  {
+                                                                                                                                                    "60":  {
+                                                                                                                                                               "M":  {
+                                                                                                                                                                         "enabled":  {
+                                                                                                                                                                                         "BOOL":  true
+                                                                                                                                                                                     },
+                                                                                                                                                                         "leverage":  {
+                                                                                                                                                                                          "N":  "15"
+                                                                                                                                                                                      },
+                                                                                                                                                                         "balancePercent":  {
+                                                                                                                                                                                                "N":  "50"
+                                                                                                                                                                                            },
+                                                                                                                                                                         "riskPercent":  {
+                                                                                                                                                                                             "N":  "1"
+                                                                                                                                                                                         },
+                                                                                                                                                                         "tpDistribution":  {
+                                                                                                                                                                                                "L":  [
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "N":  "0.6"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "N":  "0.4"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "NULL":  true
+                                                                                                                                                                                                          }
+                                                                                                                                                                                                      ]
+                                                                                                                                                                                            }
+                                                                                                                                                                     }
+                                                                                                                                                           },
+                                                                                                                                                    "120":  {
+                                                                                                                                                                "M":  {
+                                                                                                                                                                          "enabled":  {
+                                                                                                                                                                                          "BOOL":  true
+                                                                                                                                                                                      },
+                                                                                                                                                                          "leverage":  {
+                                                                                                                                                                                           "N":  "20"
+                                                                                                                                                                                       },
+                                                                                                                                                                          "balancePercent":  {
+                                                                                                                                                                                                 "N":  "50"
+                                                                                                                                                                                             },
+                                                                                                                                                                          "riskPercent":  {
+                                                                                                                                                                                              "N":  "1.2"
+                                                                                                                                                                                          },
+                                                                                                                                                                          "tpDistribution":  {
+                                                                                                                                                                                                 "L":  [
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "N":  "0.7"
+                                                                                                                                                                                                           },
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "N":  "0.3"
+                                                                                                                                                                                                           },
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "NULL":  true
+                                                                                                                                                                                                           }
+                                                                                                                                                                                                       ]
+                                                                                                                                                                                             }
+                                                                                                                                                                      }
+                                                                                                                                                            },
+                                                                                                                                                    "240":  {
+                                                                                                                                                                "M":  {
+                                                                                                                                                                          "enabled":  {
+                                                                                                                                                                                          "BOOL":  true
+                                                                                                                                                                                      },
+                                                                                                                                                                          "leverage":  {
+                                                                                                                                                                                           "N":  "15"
+                                                                                                                                                                                       },
+                                                                                                                                                                          "balancePercent":  {
+                                                                                                                                                                                                 "N":  "50"
+                                                                                                                                                                                             },
+                                                                                                                                                                          "riskPercent":  {
+                                                                                                                                                                                              "N":  "1.2"
+                                                                                                                                                                                          },
+                                                                                                                                                                          "tpDistribution":  {
+                                                                                                                                                                                                 "L":  [
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "N":  "0.8"
+                                                                                                                                                                                                           },
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "N":  "0.2"
+                                                                                                                                                                                                           },
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "NULL":  true
+                                                                                                                                                                                                           }
+                                                                                                                                                                                                       ]
+                                                                                                                                                                                             }
+                                                                                                                                                                      }
+                                                                                                                                                            }
+                                                                                                                                                }
+                                                                                                                                      },
+                                                                                                                       "exchanges":  {
+                                                                                                                                         "L":  [
+                                                                                                                                                   {
+                                                                                                                                                       "S":  "bingx"
+                                                                                                                                                   }
+                                                                                                                                               ]
+                                                                                                                                     }
+                                                                                                                   }
+                                                                                                         },
+                                                                                             "SOLUSDT":  {
+                                                                                                             "M":  {
+                                                                                                                       "enabled":  {
+                                                                                                                                       "BOOL":  true
+                                                                                                                                   },
+                                                                                                                       "timeframes":  {
+                                                                                                                                          "M":  {
+                                                                                                                                                    "60":  {
+                                                                                                                                                               "M":  {
+                                                                                                                                                                         "enabled":  {
+                                                                                                                                                                                         "BOOL":  true
+                                                                                                                                                                                     },
+                                                                                                                                                                         "leverage":  {
+                                                                                                                                                                                          "N":  "15"
+                                                                                                                                                                                      },
+                                                                                                                                                                         "balancePercent":  {
+                                                                                                                                                                                                "N":  "50"
+                                                                                                                                                                                            },
+                                                                                                                                                                         "riskPercent":  {
+                                                                                                                                                                                             "N":  "1"
+                                                                                                                                                                                         },
+                                                                                                                                                                         "tpDistribution":  {
+                                                                                                                                                                                                "L":  [
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "N":  "0.6"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "N":  "0.4"
+                                                                                                                                                                                                          },
+                                                                                                                                                                                                          {
+                                                                                                                                                                                                              "NULL":  true
+                                                                                                                                                                                                          }
+                                                                                                                                                                                                      ]
+                                                                                                                                                                                            }
+                                                                                                                                                                     }
+                                                                                                                                                           },
+                                                                                                                                                    "120":  {
+                                                                                                                                                                "M":  {
+                                                                                                                                                                          "enabled":  {
+                                                                                                                                                                                          "BOOL":  true
+                                                                                                                                                                                      },
+                                                                                                                                                                          "leverage":  {
+                                                                                                                                                                                           "N":  "20"
+                                                                                                                                                                                       },
+                                                                                                                                                                          "balancePercent":  {
+                                                                                                                                                                                                 "N":  "50"
+                                                                                                                                                                                             },
+                                                                                                                                                                          "riskPercent":  {
+                                                                                                                                                                                              "N":  "1.2"
+                                                                                                                                                                                          },
+                                                                                                                                                                          "tpDistribution":  {
+                                                                                                                                                                                                 "L":  [
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "N":  "0.7"
+                                                                                                                                                                                                           },
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "N":  "0.3"
+                                                                                                                                                                                                           },
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "NULL":  true
+                                                                                                                                                                                                           }
+                                                                                                                                                                                                       ]
+                                                                                                                                                                                             }
+                                                                                                                                                                      }
+                                                                                                                                                            },
+                                                                                                                                                    "240":  {
+                                                                                                                                                                "M":  {
+                                                                                                                                                                          "enabled":  {
+                                                                                                                                                                                          "BOOL":  true
+                                                                                                                                                                                      },
+                                                                                                                                                                          "leverage":  {
+                                                                                                                                                                                           "N":  "15"
+                                                                                                                                                                                       },
+                                                                                                                                                                          "balancePercent":  {
+                                                                                                                                                                                                 "N":  "50"
+                                                                                                                                                                                             },
+                                                                                                                                                                          "riskPercent":  {
+                                                                                                                                                                                              "N":  "1.2"
+                                                                                                                                                                                          },
+                                                                                                                                                                          "tpDistribution":  {
+                                                                                                                                                                                                 "L":  [
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "N":  "0.8"
+                                                                                                                                                                                                           },
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "N":  "0.2"
+                                                                                                                                                                                                           },
+                                                                                                                                                                                                           {
+                                                                                                                                                                                                               "NULL":  true
+                                                                                                                                                                                                           }
+                                                                                                                                                                                                       ]
+                                                                                                                                                                                             }
+                                                                                                                                                                      }
+                                                                                                                                                            }
+                                                                                                                                                }
+                                                                                                                                      },
+                                                                                                                       "exchanges":  {
+                                                                                                                                         "L":  [
+                                                                                                                                                   {
+                                                                                                                                                       "S":  "bingx"
+                                                                                                                                                   }
+                                                                                                                                               ]
+                                                                                                                                     }
+                                                                                                                   }
+                                                                                                         }
+                                                                                         }
+                                                                               }
+                                                               }
+                                                     },
+                                         "spot":  {
+                                                      "M":  {
+                                                                "enabled":  {
+                                                                                "BOOL":  false
+                                                                            },
+                                                                "symbols":  {
+                                                                                "M":  {
+                                                                                          "BTCUSDT":  {
+                                                                                                          "M":  {
+                                                                                                                    "enabled":  {
+                                                                                                                                    "BOOL":  true
+                                                                                                                                },
+                                                                                                                    "timeframes":  {
+                                                                                                                                       "M":  {
+                                                                                                                                                 "D":  {
+                                                                                                                                                           "M":  {
+                                                                                                                                                                     "enabled":  {
+                                                                                                                                                                                     "BOOL":  true
+                                                                                                                                                                                 },
+                                                                                                                                                                     "balancePercent":  {
+                                                                                                                                                                                            "N":  "8"
+                                                                                                                                                                                        },
+                                                                                                                                                                     "tpDistribution":  {
+                                                                                                                                                                                            "L":  [
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.5"
+                                                                                                                                                                                                      },
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.3"
+                                                                                                                                                                                                      },
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.2"
+                                                                                                                                                                                                      }
+                                                                                                                                                                                                  ]
+                                                                                                                                                                                        }
+                                                                                                                                                                 }
+                                                                                                                                                       },
+                                                                                                                                                 "W":  {
+                                                                                                                                                           "M":  {
+                                                                                                                                                                     "enabled":  {
+                                                                                                                                                                                     "BOOL":  true
+                                                                                                                                                                                 },
+                                                                                                                                                                     "balancePercent":  {
+                                                                                                                                                                                            "N":  "12"
+                                                                                                                                                                                        },
+                                                                                                                                                                     "tpDistribution":  {
+                                                                                                                                                                                            "L":  [
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.4"
+                                                                                                                                                                                                      },
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.3"
+                                                                                                                                                                                                      },
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.3"
+                                                                                                                                                                                                      }
+                                                                                                                                                                                                  ]
+                                                                                                                                                                                        }
+                                                                                                                                                                 }
+                                                                                                                                                       }
+                                                                                                                                             }
+                                                                                                                                   },
+                                                                                                                    "exchanges":  {
+                                                                                                                                      "L":  [
+                                                                                                                                                {
+                                                                                                                                                    "S":  "bingx"
+                                                                                                                                                }
+                                                                                                                                            ]
+                                                                                                                                  }
+                                                                                                                }
+                                                                                                      },
+                                                                                          "ETHUSDT":  {
+                                                                                                          "M":  {
+                                                                                                                    "enabled":  {
+                                                                                                                                    "BOOL":  true
+                                                                                                                                },
+                                                                                                                    "timeframes":  {
+                                                                                                                                       "M":  {
+                                                                                                                                                 "D":  {
+                                                                                                                                                           "M":  {
+                                                                                                                                                                     "enabled":  {
+                                                                                                                                                                                     "BOOL":  true
+                                                                                                                                                                                 },
+                                                                                                                                                                     "balancePercent":  {
+                                                                                                                                                                                            "N":  "6"
+                                                                                                                                                                                        },
+                                                                                                                                                                     "tpDistribution":  {
+                                                                                                                                                                                            "L":  [
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.5"
+                                                                                                                                                                                                      },
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.3"
+                                                                                                                                                                                                      },
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.2"
+                                                                                                                                                                                                      }
+                                                                                                                                                                                                  ]
+                                                                                                                                                                                        }
+                                                                                                                                                                 }
+                                                                                                                                                       },
+                                                                                                                                                 "W":  {
+                                                                                                                                                           "M":  {
+                                                                                                                                                                     "enabled":  {
+                                                                                                                                                                                     "BOOL":  true
+                                                                                                                                                                                 },
+                                                                                                                                                                     "balancePercent":  {
+                                                                                                                                                                                            "N":  "10"
+                                                                                                                                                                                        },
+                                                                                                                                                                     "tpDistribution":  {
+                                                                                                                                                                                            "L":  [
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.4"
+                                                                                                                                                                                                      },
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.3"
+                                                                                                                                                                                                      },
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.3"
+                                                                                                                                                                                                      }
+                                                                                                                                                                                                  ]
+                                                                                                                                                                                        }
+                                                                                                                                                                 }
+                                                                                                                                                       }
+                                                                                                                                             }
+                                                                                                                                   },
+                                                                                                                    "exchanges":  {
+                                                                                                                                      "L":  [
+                                                                                                                                                {
+                                                                                                                                                    "S":  "bingx"
+                                                                                                                                                }
+                                                                                                                                            ]
+                                                                                                                                  }
+                                                                                                                }
+                                                                                                      },
+                                                                                          "XRPUSDT":  {
+                                                                                                          "M":  {
+                                                                                                                    "enabled":  {
+                                                                                                                                    "BOOL":  true
+                                                                                                                                },
+                                                                                                                    "timeframes":  {
+                                                                                                                                       "M":  {
+                                                                                                                                                 "D":  {
+                                                                                                                                                           "M":  {
+                                                                                                                                                                     "enabled":  {
+                                                                                                                                                                                     "BOOL":  true
+                                                                                                                                                                                 },
+                                                                                                                                                                     "balancePercent":  {
+                                                                                                                                                                                            "N":  "4"
+                                                                                                                                                                                        },
+                                                                                                                                                                     "tpDistribution":  {
+                                                                                                                                                                                            "L":  [
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.5"
+                                                                                                                                                                                                      },
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.3"
+                                                                                                                                                                                                      },
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.2"
+                                                                                                                                                                                                      }
+                                                                                                                                                                                                  ]
+                                                                                                                                                                                        }
+                                                                                                                                                                 }
+                                                                                                                                                       },
+                                                                                                                                                 "W":  {
+                                                                                                                                                           "M":  {
+                                                                                                                                                                     "enabled":  {
+                                                                                                                                                                                     "BOOL":  true
+                                                                                                                                                                                 },
+                                                                                                                                                                     "balancePercent":  {
+                                                                                                                                                                                            "N":  "6"
+                                                                                                                                                                                        },
+                                                                                                                                                                     "tpDistribution":  {
+                                                                                                                                                                                            "L":  [
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.4"
+                                                                                                                                                                                                      },
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.3"
+                                                                                                                                                                                                      },
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.3"
+                                                                                                                                                                                                      }
+                                                                                                                                                                                                  ]
+                                                                                                                                                                                        }
+                                                                                                                                                                 }
+                                                                                                                                                       }
+                                                                                                                                             }
+                                                                                                                                   },
+                                                                                                                    "exchanges":  {
+                                                                                                                                      "L":  [
+                                                                                                                                                {
+                                                                                                                                                    "S":  "bingx"
+                                                                                                                                                }
+                                                                                                                                            ]
+                                                                                                                                  }
+                                                                                                                }
+                                                                                                      },
+                                                                                          "SOLUSDT":  {
+                                                                                                          "M":  {
+                                                                                                                    "enabled":  {
+                                                                                                                                    "BOOL":  true
+                                                                                                                                },
+                                                                                                                    "timeframes":  {
+                                                                                                                                       "M":  {
+                                                                                                                                                 "D":  {
+                                                                                                                                                           "M":  {
+                                                                                                                                                                     "enabled":  {
+                                                                                                                                                                                     "BOOL":  true
+                                                                                                                                                                                 },
+                                                                                                                                                                     "balancePercent":  {
+                                                                                                                                                                                            "N":  "4"
+                                                                                                                                                                                        },
+                                                                                                                                                                     "tpDistribution":  {
+                                                                                                                                                                                            "L":  [
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.5"
+                                                                                                                                                                                                      },
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.3"
+                                                                                                                                                                                                      },
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.2"
+                                                                                                                                                                                                      }
+                                                                                                                                                                                                  ]
+                                                                                                                                                                                        }
+                                                                                                                                                                 }
+                                                                                                                                                       },
+                                                                                                                                                 "W":  {
+                                                                                                                                                           "M":  {
+                                                                                                                                                                     "enabled":  {
+                                                                                                                                                                                     "BOOL":  true
+                                                                                                                                                                                 },
+                                                                                                                                                                     "balancePercent":  {
+                                                                                                                                                                                            "N":  "6"
+                                                                                                                                                                                        },
+                                                                                                                                                                     "tpDistribution":  {
+                                                                                                                                                                                            "L":  [
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.4"
+                                                                                                                                                                                                      },
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.3"
+                                                                                                                                                                                                      },
+                                                                                                                                                                                                      {
+                                                                                                                                                                                                          "N":  "0.3"
+                                                                                                                                                                                                      }
+                                                                                                                                                                                                  ]
+                                                                                                                                                                                        }
+                                                                                                                                                                 }
+                                                                                                                                                       }
+                                                                                                                                             }
+                                                                                                                                   },
+                                                                                                                    "exchanges":  {
+                                                                                                                                      "L":  [
+                                                                                                                                                {
+                                                                                                                                                    "S":  "bingx"
+                                                                                                                                                }
+                                                                                                                                            ]
+                                                                                                                                  }
+                                                                                                                }
+                                                                                                      }
+                                                                                      }
+                                                                            }
+                                                            }
+                                                  }
+                                     }
+                           },
+    "SK":  {
+               "S":  "PROFILE"
+           }
+}

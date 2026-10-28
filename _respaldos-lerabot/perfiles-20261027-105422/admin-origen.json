@@ -1,0 +1,48 @@
+{
+    "displayName":  {
+                        "S":  "Administrador LERABOT"
+                    },
+    "role":  {
+                 "S":  "ADMIN"
+             },
+    "updatedAt":  {
+                      "S":  "2026-10-27T15:16:07.820Z"
+                  },
+    "status":  {
+                   "S":  "active"
+               },
+    "contact":  {
+                    "M":  {
+                              "email":  {
+                                            "S":  "huamaniledesmajose@gmail.com"
+                                        },
+                              "mobilePhone":  {
+                                                  "S":  ""
+                                              },
+                              "notifications":  {
+                                                    "M":  {
+                                                              "channels":  {
+                                                                               "L":  [
+
+                                                                                     ]
+                                                                           },
+                                                              "enabled":  {
+                                                                              "BOOL":  false
+                                                                          }
+                                                          }
+                                                }
+                          }
+                },
+    "createdAt":  {
+                      "S":  "2026-10-27T15:16:07.820Z"
+                  },
+    "PK":  {
+               "S":  "ADMIN#huamaniledesmajose@gmail.com"
+           },
+    "email":  {
+                  "S":  "huamaniledesmajose@gmail.com"
+              },
+    "SK":  {
+               "S":  "PROFILE"
+           }
+}

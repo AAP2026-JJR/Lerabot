@@ -13,7 +13,7 @@ Fase 1: base del proyecto. Las integraciones con exchanges y la infraestructura 
 
 Scrip correr info de proyecto
 ```bash
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Exportar-Contexto-Lerabot.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Exportar-LERABOT-Codigo-Actual.ps1
 ```
 
 
