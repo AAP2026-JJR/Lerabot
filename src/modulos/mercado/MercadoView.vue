@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { consultarMercado } from './servicio'
 import type { PrecioMoneda } from './tipos'
+import { observarCotizaciones, cotizacionesVivas, cotizacionActual, estadoCotizaciones } from './cotizacionesVivas'
 
 const lista = ref<PrecioMoneda[]>([])
 const buscar = ref('')
@@ -14,6 +15,8 @@ const fuente = ref('')
 const ultimaConsulta = ref('')
 let intervalo: ReturnType<typeof setInterval> | undefined
 let alive = true
+let dejarPrecios: (() => void) | undefined
+const precioVivo = (moneda: PrecioMoneda) => { void cotizacionesVivas.value; return cotizacionActual(moneda.simbolo.toUpperCase() + "USDT") }
 const formatoUsd = (valor: number | null) => valor === null ? '—' :
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: valor < 1 ? 8 : 2 }).format(valor)
 const resultado = computed(() => lista.value.filter(m => `${m.nombre} ${m.simbolo}`.toLowerCase().includes(buscar.value.trim().toLowerCase())))
@@ -25,6 +28,8 @@ async function actualizar() {
     const datos = await consultarMercado(pagina.value, 50)
     if (!alive) return
     lista.value = datos.monedas
+    dejarPrecios?.()
+    dejarPrecios = observarCotizaciones(datos.monedas.map(m => m.simbolo.toUpperCase() + "USDT"))
     actualizado.value = datos.actualizadoEn
     desactualizado.value = datos.desactualizado
     fuente.value = datos.fuente
@@ -47,6 +52,7 @@ onMounted(() => {
 function alVolverAVista() { if (!document.hidden) void actualizar() }
 onUnmounted(() => {
   alive = false
+  dejarPrecios?.()
   if (intervalo) clearInterval(intervalo)
   document.removeEventListener('visibilitychange', alVolverAVista)
 })
@@ -63,7 +69,8 @@ onUnmounted(() => {
     </header>
     <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500">
       <span>Fuente: {{ fuente || 'pendiente de conexión' }}</span>
-      <span>· Actualización automática cada 5 min</span>
+      <span>· Precio: Binance Spot en vivo cuando esté disponible · Ranking: CoinGecko cada 5 min</span>
+      <span>· WebSocket: {{ estadoCotizaciones }}</span>
       <span v-if="actualizado">· Datos: {{ new Date(actualizado).toLocaleString('es-PE') }}</span>
       <span v-if="ultimaConsulta">· Consultado: {{ new Date(ultimaConsulta).toLocaleTimeString('es-PE') }}</span>
       <span v-if="desactualizado" class="font-semibold text-amber-700">· Últimos datos disponibles (no actuales)</span>
@@ -82,8 +89,8 @@ onUnmounted(() => {
           <tbody><tr v-for="moneda in resultado" :key="moneda.id" class="border-t border-slate-100">
             <td class="p-3 text-slate-500">{{ moneda.posicion ?? '—' }}</td>
             <td class="p-3"><strong>{{ moneda.nombre }}</strong><span class="ml-2 text-xs text-slate-500">{{ moneda.simbolo }}</span></td>
-            <td class="p-3 text-right tabular-nums">{{ formatoUsd(moneda.precioUsd) }}</td>
-            <td class="p-3 text-right tabular-nums" :class="moneda.cambio24h === null ? 'text-slate-500' : moneda.cambio24h >= 0 ? 'text-green-600' : 'text-red-600'">{{ moneda.cambio24h === null ? '—' : `${moneda.cambio24h.toFixed(2)}%` }}</td>
+            <td class="p-3 text-right tabular-nums">{{ formatoUsd(precioVivo(moneda)?.precio ?? moneda.precioUsd) }}</td>
+            <td class="p-3 text-right tabular-nums" :class="(precioVivo(moneda)?.cambio24h ?? moneda.cambio24h) === null ? 'text-slate-500' : (precioVivo(moneda)?.cambio24h ?? moneda.cambio24h)! >= 0 ? 'text-green-600' : 'text-red-600'">{{ (precioVivo(moneda)?.cambio24h ?? moneda.cambio24h) === null ? '—' : `${((precioVivo(moneda)?.cambio24h ?? moneda.cambio24h) as number).toFixed(2)}%` }}</td>
             <td class="p-3 text-right tabular-nums">{{ formatoUsd(moneda.capitalizacionUsd) }}</td>
           </tr></tbody>
         </table>
