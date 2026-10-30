@@ -55,6 +55,45 @@ const detalleTexto = computed(() => {
   return JSON.stringify(dato ?? seleccion.value, null, 2)
 })
 const eventoCompleto = computed(() => seleccion.value ? JSON.stringify(seleccion.value, null, 2) : '')
+
+// Diagnostico resumido de eventos; no confunde una senal enrutada con una orden ejecutada.
+const diagnostico = computed(() => {
+  const evento = seleccion.value
+  if (!evento) return null
+  const extra = (valor: unknown): Record<string, unknown> => {
+    if (typeof valor === 'string') {
+      try { const objeto: unknown = JSON.parse(valor); return objeto && typeof objeto === 'object' && !Array.isArray(objeto) ? objeto as Record<string, unknown> : {} } catch { return {} }
+    }
+    return valor && typeof valor === 'object' && !Array.isArray(valor) ? valor as Record<string, unknown> : {}
+  }
+  const data = { ...extra(evento.payload), ...extra(evento.details), ...evento } as Record<string, unknown>
+  const dato = (...claves: string[]) => {
+    for (const clave of claves) {
+      const valor = data[clave]
+      if (valor !== undefined && valor !== null && String(valor).trim() !== '') return String(valor)
+    }
+    return ''
+  }
+  const status = String(evento.status ?? '').toUpperCase()
+  const rejected = /REJECT|FAIL|ERROR/.test(status)
+  const routed = /ROUTED|PASS_RULES/.test(status)
+  const success = /SUCCESS|EXECUTED|FILLED/.test(status)
+  const executed = data.executed === true || String(data.executed).toLowerCase() === 'true'
+  const trades = Number(data.tradesCount ?? 0)
+  const evidencia = executed || (success && /EXECUTED|FILLED/.test(dato('eventType','stage').toUpperCase()))
+  const titulo = rejected ? 'Senal rechazada por una validacion' : routed ? 'Senal aceptada y enviada al ejecutor' : success ? 'Evento finalizado correctamente' : 'Resultado registrado por el sistema'
+  const explicacion = rejected ? 'La senal no supero una regla. Revisa el motivo y la etapa para saber que corregir.' : routed ? 'Supero la validacion y fue enrutada. Este estado por si solo NO confirma la compra o venta.' : success ? 'Se registro un resultado exitoso en esta etapa; confirma el estado de la orden antes de tratarlo como una venta o compra realizada.' : 'Consulta la etapa y el mensaje; este estado no determina por si solo si hubo operacion.'
+  return {
+    titulo, explicacion,
+    color: rejected ? 'border-red-200 bg-red-50 text-red-800' : routed ? 'border-amber-200 bg-amber-50 text-amber-900' : success ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-800',
+    motivo: dato('reasonCode','rejectReason','reason','errorCode','message') || 'Sin motivo registrado',
+    etapa: dato('stage','eventType') || 'No informada',
+    regla: dato('rule','ruleName','validationRule') || 'No informada',
+    timeframe: dato('timeframe','interval') || 'No informado',
+    ejecucion: evidencia ? 'Indicador de ejecucion informado (validar confirmacion del exchange)' : trades > 0 ? 'Trades reportados: '+trades+' (confirmacion pendiente)' : 'No hay confirmacion de orden ejecutada'
+  }
+})
+
 // Filtros inmediatos y combinables sobre los registros cargados.
 // Sin depender del contrato de filtros del Scan actual de DynamoDB.
 const eventosVisibles = computed(() => eventos.value.filter(e => {
@@ -163,8 +202,18 @@ onUnmounted(() => window.removeEventListener('keydown', cerrarEscape))
         <header class="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5"><div><p class="text-xs font-semibold uppercase tracking-wide text-[#00856a]">Auditoría de Trading</p><h3 class="mt-1 text-xl font-bold">Detalle del evento</h3><p class="mt-1 break-all text-xs text-slate-500">{{seleccion.eventId || seleccion.PK}}</p></div><button class="audit-btn" aria-label="Cerrar detalle" @click="cerrar">✕</button></header>
         <div class="max-h-[75vh] overflow-y-auto p-6"><div class="flex flex-wrap gap-2"><span class="rounded-lg px-3 py-1 text-xs font-semibold" :class="colorEstado(seleccion.status)">{{seleccion.status || 'SIN ESTADO'}}</span><span class="rounded-lg bg-slate-100 px-3 py-1 text-xs">{{seleccion.source || 'Sin fuente'}}</span><span class="rounded-lg bg-slate-100 px-3 py-1 text-xs">{{seleccion.tradeType || 'Sin mercado'}}</span></div>
           <div class="mt-4 grid gap-3 sm:grid-cols-2"><div class="modal-field"><span>Fecha</span><b>{{fecha(seleccion.createdAt)}}</b></div><div class="modal-field"><span>Símbolo / Acción</span><b>{{seleccion.symbol || '—'}} · {{seleccion.side || '—'}}</b></div><div class="modal-field"><span>Tipo de evento</span><b>{{seleccion.eventType || '—'}}</b></div><div class="modal-field"><span>Trades registrados</span><b>{{seleccion.tradesCount ?? 'No informado'}}</b></div><div class="modal-field sm:col-span-2"><span>Operation ID</span><b class="break-all">{{seleccion.operationId || '—'}}</b></div><div class="modal-field sm:col-span-2"><span>Signal ID</span><b class="break-all">{{seleccion.signalId || '—'}}</b></div><div class="modal-field sm:col-span-2"><span>Mensaje / motivo</span><b>{{seleccion.message || 'No registrado'}}</b></div></div>
-          <p class="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">El enrutamiento no implica confirmación de orden completada por el exchange.</p>
-          <div class="mt-4 flex items-center justify-between gap-2"><h4 class="font-bold">JSON del evento (registro completo)</h4><button class="audit-btn" @click="copiarJSON">Copiar JSON</button></div><pre class="json-box">{{eventoCompleto}}</pre><details class="mt-3 text-sm"><summary class="cursor-pointer font-medium text-slate-600">Ver detalles normalizados / payload</summary><pre class="json-box mt-2">{{detalleTexto}}</pre></details><p v-if="cargandoDetalle" class="mt-3 text-xs text-slate-500">Consultando detalles completos…</p>
+          <section v-if="diagnostico" class="mt-4 rounded-xl border p-4" :class="diagnostico.color" aria-label="Diagnostico rapido del evento">
+            <h4 class="text-base font-bold">{{ diagnostico.titulo }}</h4>
+            <p class="mt-1 text-sm">{{ diagnostico.explicacion }}</p>
+            <div class="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+              <div><span class="font-semibold">Motivo / codigo:</span> {{ diagnostico.motivo }}</div>
+              <div><span class="font-semibold">Etapa:</span> {{ diagnostico.etapa }}</div>
+              <div><span class="font-semibold">Regla:</span> {{ diagnostico.regla }}</div>
+              <div><span class="font-semibold">Temporalidad:</span> {{ diagnostico.timeframe }}</div>
+              <div class="sm:col-span-2"><span class="font-semibold">Ejecucion:</span> {{ diagnostico.ejecucion }}</div>
+            </div>
+          </section>
+          <details class="mt-4 rounded-lg border border-slate-200 p-3 text-sm"><summary class="cursor-pointer font-bold text-slate-700">Ver JSON tecnico completo</summary><div class="mt-3 flex justify-end"><button class="audit-btn" @click="copiarJSON">Copiar JSON</button></div><pre class="json-box">{{eventoCompleto}}</pre><details class="mt-3 text-sm"><summary class="cursor-pointer font-medium text-slate-600">Ver detalles normalizados / payload</summary><pre class="json-box mt-2">{{detalleTexto}}</pre></details></details><p v-if="cargandoDetalle" class="mt-3 text-xs text-slate-500">Consultando detalles completos…</p>
         </div>
       </section>
     </div>
