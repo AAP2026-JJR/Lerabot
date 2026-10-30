@@ -2,8 +2,10 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { listarOperaciones, detalleOperacion, preciosDeMercado } from './servicio'
 import type { OperacionSpot } from './tipos'
+import { observarCotizaciones, cotizacionActual, cotizacionesVivas, estadoCotizaciones } from '../mercado/cotizacionesVivas'
 const filas=ref<OperacionSpot[]>([]), precios=ref<Record<string,{precio:number;cambio24h:number|null}>>({})
 const cargando=ref(false), error=ref(''), avisoPrecios=ref(''), siguienteCursor=ref(''), cursor=ref(''), historico=ref<string[]>([])
+let dejarPrecios: (() => void) | undefined
 const tamanioPagina=ref(10)
 const suscriptor=ref(''), estado=ref(''), exchange=ref(''), simbolo=ref(''), buscar=ref(''), desde=ref(''), hasta=ref('')
 const actual=ref<OperacionSpot|null>(null), modalJson=ref(false), verJson=ref(false), cargandoDetalle=ref(false)
@@ -13,7 +15,7 @@ const fecha=(v:unknown)=>typeof v==='string'&&v?new Date(v).toLocaleString('es-P
 const sub=(o:OperacionSpot)=>/^SUB#([^#]+)/.exec(o.PK)?.[1]||'—'
 const orden=(o:OperacionSpot)=>String(o.side||'').toUpperCase()==='BUY'?'Compra':String(o.side||'').toUpperCase()==='SELL'?'Venta':'Otro'
 const montousd=(o:OperacionSpot)=>Number(o.buyPrice||0)*Number(o.quantity||0)
-const precio=(o:OperacionSpot)=>precios.value[String(o.symbol||'').toUpperCase()]?.precio
+const precio=(o:OperacionSpot)=>{ void cotizacionesVivas.value; return cotizacionActual(String(o.symbol||''))?.precio ?? precios.value[String(o.symbol||'').toUpperCase()]?.precio }
 const diferencial=(o:OperacionSpot)=>{const p=precio(o), entrada=o.buyPrice;return typeof p==='number'&&typeof entrada==='number'&&entrada>0?(p/entrada-1)*100:null}
 // Valoraciones referenciales. Sin precio valido no se calcula ni se inventa PnL.
 const valorActual=(o:OperacionSpot):number|null=>{const p=precio(o),q=Number(o.quantity);return typeof p==='number'&&Number.isFinite(p)&&p>=0&&Number.isFinite(q)&&q>0?p*q:null}
@@ -32,7 +34,9 @@ async function cargar(reset=false) {
   try {const r=await listarOperaciones({limite:String(tamanioPagina.value),cursor:cursor.value});filas.value=r.operaciones||[];siguienteCursor.value=r.siguienteCursor||''}
   catch(e){error.value=e instanceof Error?e.message:'No se pudieron cargar operaciones';filas.value=[]}
   finally{cargando.value=false}
-  if(filas.value.length) {try {precios.value=await preciosDeMercado(simbolosMercado.value);avisoPrecios.value=''}catch {avisoPrecios.value='Cotizaciones no disponibles; se muestran solo precios registrados'}}
+  dejarPrecios?.()
+  dejarPrecios = filas.value.length ? observarCotizaciones(simbolosMercado.value) : undefined
+  if(filas.value.length) {try {precios.value=await preciosDeMercado(simbolosMercado.value);avisoPrecios.value=''}catch {avisoPrecios.value='Sin respaldo CoinGecko; esperando cotizaciones en vivo'}}
 }
 async function actualizar(){await cargar(true)}
 async function seleccionar(o:OperacionSpot){
@@ -73,11 +77,12 @@ const totalTp=(o:OperacionSpot):number|null=>{
 }
 watch(actual,(v)=>{if(!v)cerrarDetalle()})
 onMounted(()=>{window.addEventListener('keydown',tecla);void actualizar()})
-onUnmounted(()=>window.removeEventListener('keydown',tecla))
+onUnmounted(()=>{dejarPrecios?.();window.removeEventListener('keydown',tecla)})
 </script>
 <template>
   <div class="space-y-4 text-[#102c37]">
-    <header><h2 class="text-2xl font-bold">Operaciones</h2><p class="text-sm text-slate-500">Compras Spot y órdenes registradas por suscriptor en DynamoDB. Precios de referencia desde Mercado.</p></header>
+    <header><h2 class="text-2xl font-bold">Operaciones</h2><p class="text-sm text-slate-500">Compras Spot y órdenes registradas por suscriptor en DynamoDB. Precios Binance Spot en vivo (respaldo CoinGecko).</p></header>
+    <p class="text-xs text-slate-500">Cotizaciones WebSocket: {{ estadoCotizaciones }} · Referencia Binance Spot, no necesariamente igual al exchange de ejecución.</p>
     <div v-if="error" role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{{ error }} <button class="ml-3 underline" @click="actualizar">Reintentar</button></div>
     <section class="rounded-2xl border border-[#e0e9e6] bg-white p-4 shadow-sm">
       <div class="mb-3 flex flex-wrap items-center justify-between gap-3"><div><h3 class="font-semibold">Filtros de búsqueda</h3><p class="text-xs text-slate-500">Selección inmediata · Se aplican a los registros cargados</p></div><div class="flex items-center gap-2"><button type="button" :disabled="cargando" class="inline-flex h-9 min-w-[112px] items-center justify-center gap-2 rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400 disabled:cursor-wait disabled:opacity-60" @click="actualizar"><span aria-hidden="true">↻</span>{{ cargando ? 'Actualizando...' : 'Actualizar' }}</button><button type="button" class="inline-flex h-9 min-w-[90px] items-center justify-center rounded-lg border border-slate-300 bg-slate-50 px-4 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-slate-400" @click="limpiar">Limpiar</button></div></div>
