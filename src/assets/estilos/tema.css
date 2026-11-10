@@ -1,0 +1,52 @@
+
+:root {
+    /* Identidad LERABOT — Propuesta 4 */
+    --color-primario: #00856a;
+    --color-primario-hover: #006d57;
+    --color-primario-suave: #e1f4ef;
+
+    /* Superficies */
+    --color-fondo: #f6f9f8;
+    --color-superficie: #ffffff;
+    --color-sidebar: #ffffff;
+    --color-borde: #e3ebe8;
+
+    /* Tipografía */
+    --color-texto: #102c37;
+    --color-texto-secundario: #64748b;
+
+    /* Indicadores financieros */
+    --color-ganancia: #16a34a;
+    --color-perdida: #dc2626;
+    --color-advertencia: #d97706;
+    --color-informacion: #2563eb;
+
+    /* Diseño */
+    --radio-tarjeta: 14px;
+    --radio-boton: 9px;
+    --sombra-tarjeta: 0 2px 12px
+    rgba(16, 44, 55, 0.04);
+
+    --ancho-sidebar: 248px;
+    --alto-header: 72px;
+
+    --fuente-principal: "Inter",
+    system-ui, sans-serif;
+}
+
+/* Tokens disponibles en Tailwind CSS 4 */
+@theme inline {
+    --color-marca: var(--color-primario);
+    --color-marca-suave: var(--color-primario-suave);
+    --color-fondo-app: var(--color-fondo);
+    --color-superficie-app: var(--color-superficie);
+    --color-texto-app: var(--color-texto);
+    --color-positivo: var(--color-ganancia);
+    --color-negativo: var(--color-perdida);
+}
+
+body {
+    background-color: var(--color-fondo);
+    color: var(--color-texto);
+    font-family: var(--fuente-principal);
+}
