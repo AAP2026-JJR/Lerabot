@@ -1,3 +1,4 @@
+// DEMO SIN AUTENTICACION: el parametro suscriptor es modificable por el cliente.
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import { DynamoDBDocumentClient, ScanCommand, GetCommand } from '@aws-sdk/lib-dynamodb'
 const db = DynamoDBDocumentClient.from(new DynamoDBClient({}), {marshallOptions:{removeUndefinedValues:true}})
@@ -33,10 +34,12 @@ export const handler = async (event={}) => {
     if(path.endsWith('/detalle')) {
       if(!txt(qs.pk)||!txt(qs.sk)) return response(400,{ok:false,error:'Se requiere pk y sk'},event)
       const r=await db.send(new GetCommand({TableName:table,Key:{PK:qs.pk,SK:qs.sk},ConsistentRead:true}))
+      if(qs.suscriptor && !txt(r.Item?.PK).toLowerCase().startsWith(`sub#${txt(qs.suscriptor).toLowerCase()}#`))return response(404,{ok:false,error:'Operacion no encontrada'},event)
       return r.Item?response(200,{ok:true,operacion:r.Item},event):response(404,{ok:false,error:'Operacion no encontrada'},event)
     }
     if(path.endsWith('/resumen')) {
-      const {items,scanned,parcial}=await scanAll(table,2000)
+      const {items:allItems,scanned,parcial}=await scanAll(table,2000)
+      const items=qs.suscriptor?allItems.filter(x=>txt(x.PK).toLowerCase().startsWith(`sub#${txt(qs.suscriptor).toLowerCase()}#`)):allItems
       const porSimbolo={}, porEstado={};const ids=new Set();let compras=0,ventas=0,otros=0,volumenComprasUsd=0
       for(const x of items) {
         const side=txt(x.side).toUpperCase();if(side==='BUY') {compras++;volumenComprasUsd+=totalRegistro(x)} else if(side==='SELL') ventas++;else otros++
@@ -53,7 +56,7 @@ export const handler = async (event={}) => {
     // FilterExpression reduce los items devueltos, no garantiza un llenado de pagina.
     // Scan paginado se conserva, no se afirma orden cronologico global.
     const conditions=[],names={},values={}
-    if(qs.suscriptor) {conditions.push('begins_with(#pk, :sub)'); names['#pk']='PK';values[':sub']=`SUB#${qs.suscriptor}#`}
+    if(qs.suscriptor) {conditions.push('(begins_with(#pk, :sub) OR begins_with(#pk, :upper))'); names['#pk']='PK';values[':sub']=`SUB#${qs.suscriptor.toLowerCase()}#`;values[':upper']=`SUB#${qs.suscriptor.toUpperCase()}#`}
     if(qs.estado) {conditions.push('#status = :estado'); names['#status']='status';values[':estado']=qs.estado}
     if(qs.exchange) {conditions.push('#exchange = :exchange');names['#exchange']='exchangeId';values[':exchange']=qs.exchange}
     if(qs.simbolo) {conditions.push('#symbol = :simbolo');names['#symbol']='symbol';values[':simbolo']=qs.simbolo}
