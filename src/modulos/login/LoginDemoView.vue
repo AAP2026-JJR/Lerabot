@@ -4,6 +4,9 @@ import { useRouter } from 'vue-router'
 const correo = ref('')
 const error = ref('')
 const cargando = ref(false)
+const dialogoAcceso = ref(false)
+const nombrePerfil = ref('')
+const rolPerfil = ref('')
 const router = useRouter()
 async function entrar() {
   if (cargando.value) return
@@ -21,7 +24,9 @@ async function entrar() {
     }
     // Identificacion visual; no habilita permisos de backend.
     sessionStorage.setItem('lerabot_perfil_visual', JSON.stringify({email:correo.value.trim().toLowerCase(),...result.profile}))
-    await router.push('/dashboard')
+    nombrePerfil.value = result.profile.displayName || 'Usuario'
+    rolPerfil.value = result.profile.role
+    dialogoAcceso.value = true
   } catch(e) {error.value=e instanceof Error?e.message:'Error de conexion'}
   finally {cargando.value=false}
 }
@@ -62,6 +67,15 @@ async function entrar() {
     <aside class="relative hidden min-h-0 overflow-hidden bg-[#001c25] lg:block" aria-label="Vista ilustrativa de LERABOT">
       <img src="/lerabot-login-panel.png" alt="Vista gráfica de LERABOT con gráficos y seguimiento de portafolio" class="absolute inset-0 h-full w-full object-cover object-center" />
     </aside>
+    <div v-if="dialogoAcceso" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4" role="presentation">
+      <section role="dialog" aria-modal="true" aria-labelledby="titulo-acceso" class="w-full max-w-sm rounded-[26px] bg-white p-7 text-slate-900 shadow-2xl">
+        <div class="mb-4 grid size-14 place-items-center rounded-full bg-emerald-50 text-3xl font-bold text-emerald-700">✓</div>
+        <h2 id="titulo-acceso" class="text-xl font-extrabold">Perfil encontrado</h2>
+        <p class="mt-2 text-sm text-slate-600">Bienvenido, <strong>{{ nombrePerfil }}</strong>. Tu vista se abrira con el rol <strong>{{ rolPerfil === 'ADMIN' ? 'Administrador' : 'Suscriptor' }}</strong>.</p>
+        <p class="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">Acceso de demostracion: identificar un correo no autentica a su propietario. Las funciones privadas requieren autenticacion segura.</p>
+        <button class="mt-5 w-full rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white" @click="router.push('/dashboard')">Continuar al dashboard</button>
+      </section>
+    </div>
   </main>
 </template>
 

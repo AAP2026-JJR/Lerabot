@@ -13,6 +13,7 @@ const router = createRouter({
       children: [
         { path: '', redirect: '/dashboard' },
         { path: 'componentes', name: 'componentes', component: () => import('@/modulos/dashboard/GaleriaComponentesView.vue'), meta: { titulo: 'Galería de componentes' } },
+        { path: 'mi-perfil', name: 'mi-perfil', component: () => import('@/modulos/perfil/MiPerfilView.vue'), meta: { titulo: 'Mi perfil' } },
         { path: 'dashboard', name: 'dashboard', component: () => import('@/modulos/dashboard/DashboardView.vue'), meta: { titulo: 'Dashboard' } },
         { path: 'mercado', name: 'mercado', component: () => import('@/modulos/mercado/MercadoView.vue'), meta: { titulo: 'Mercado' } },
         { path: 'exchanges', name: 'exchanges', component: () => import('@/modulos/exchanges/ExchangesView.vue'), meta: { titulo: 'Exchanges' } },
@@ -31,7 +32,10 @@ const router = createRouter({
 router.beforeEach((to) => {
   if (to.path === '/registro') return true
   if (to.path === '/login') return sesionDemo() ? '/dashboard' : true
-  if (!sesionDemo()) return '/login'
+  const sesion = sesionDemo()
+  if (!sesion) return '/login'
+  // Guardia visual: NO sustituye autorización en API Gateway/Lambdas.
+  if (['/configuracion', '/auditoria'].includes(to.path) && sesion.rol !== 'ADMIN') return '/dashboard'
   return true
 })
 

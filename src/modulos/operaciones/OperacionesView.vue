@@ -2,6 +2,11 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { listarOperaciones, detalleOperacion, preciosDeMercado } from './servicio'
 import type { OperacionSpot } from './tipos'
+import { sesionDemo } from '../login/sesionDemo'
+// F10_DEMO_OPERACIONES: filtrado visual; no es aislamiento seguro.
+const sesionActual = sesionDemo()
+const miId = sesionActual?.rol === 'SUBSCRIBER' ? (sesionActual.subscriberId || '').toLowerCase() : ''
+const mostrarSoloMias = sesionActual?.rol === 'SUBSCRIBER'
 import { observarCotizaciones, cotizacionActual, cotizacionesVivas, estadoCotizaciones } from '../mercado/cotizacionesVivas'
 const filas=ref<OperacionSpot[]>([]), precios=ref<Record<string,{precio:number;cambio24h:number|null}>>({})
 const cargando=ref(false), error=ref(''), avisoPrecios=ref(''), siguienteCursor=ref(''), cursor=ref(''), historico=ref<string[]>([])
@@ -24,14 +29,14 @@ const roiNoRealizado=(o:OperacionSpot):number|null=>{const pnl=pnlNoRealizado(o)
 const esCompra=(o:OperacionSpot)=>String(o.side||'').toUpperCase()==='BUY'
 const visibles=computed(()=>filas.value.filter(o=>{
   const x=String(o.symbol||'').toUpperCase(),texto=[o.operationId,o.signalId,o.buyOrderId,o.symbol,sub(o),o.status].join(' ').toLowerCase()
-  return (!suscriptor.value||sub(o)===suscriptor.value)&&(!estado.value||o.status===estado.value)&&(!exchange.value||o.exchangeId===exchange.value)&&(!simbolo.value||x===simbolo.value)&&(!buscar.value||texto.includes(buscar.value.toLowerCase()))&&(!desde.value||String(o.createdAt||'').slice(0,10)>=desde.value)&&(!hasta.value||String(o.createdAt||'').slice(0,10)<=hasta.value)
+  return (!mostrarSoloMias || sub(o).toLowerCase()===miId) && (!suscriptor.value||sub(o)===suscriptor.value)&&(!estado.value||o.status===estado.value)&&(!exchange.value||o.exchangeId===exchange.value)&&(!simbolo.value||x===simbolo.value)&&(!buscar.value||texto.includes(buscar.value.toLowerCase()))&&(!desde.value||String(o.createdAt||'').slice(0,10)>=desde.value)&&(!hasta.value||String(o.createdAt||'').slice(0,10)<=hasta.value)
 }))
 const opciones=(campo:'suscriptor'|'estado'|'exchange'|'simbolo')=>Array.from(new Set(filas.value.map(o=>campo==='suscriptor'?sub(o):campo==='estado'?String(o.status||''):campo==='exchange'?String(o.exchangeId||''):String(o.symbol||'').toUpperCase()))).filter(Boolean).sort()
 const simbolosMercado=computed(()=>Array.from(new Set(filas.value.map(o=>String(o.symbol||'').toUpperCase()))))
 async function cargar(reset=false) {
   if(reset){cursor.value='';historico.value=[];siguienteCursor.value=''}
   cargando.value=true;error.value=''
-  try {const r=await listarOperaciones({limite:String(tamanioPagina.value),cursor:cursor.value});filas.value=r.operaciones||[];siguienteCursor.value=r.siguienteCursor||''}
+  try {const r=await listarOperaciones({limite:String(tamanioPagina.value),cursor:cursor.value,...(mostrarSoloMias?{suscriptor:miId}:{})});filas.value=(r.operaciones||[]).filter(o=>!mostrarSoloMias||sub(o).toLowerCase()===miId);siguienteCursor.value=r.siguienteCursor||''}
   catch(e){error.value=e instanceof Error?e.message:'No se pudieron cargar operaciones';filas.value=[]}
   finally{cargando.value=false}
   dejarPrecios?.()
@@ -40,9 +45,10 @@ async function cargar(reset=false) {
 }
 async function actualizar(){await cargar(true)}
 async function seleccionar(o:OperacionSpot){
+  if (mostrarSoloMias && sub(o).toLowerCase() !== miId) return
   actual.value=o; modalJson.value=true; verJson.value=false; cargandoDetalle.value=true
   try { const r=await detalleOperacion(o.PK,o.SK)
-    if(actual.value?.PK===o.PK && actual.value?.SK===o.SK && r.operacion) actual.value=r.operacion
+    if(actual.value?.PK===o.PK && actual.value?.SK===o.SK && r.operacion && (!mostrarSoloMias || sub(r.operacion).toLowerCase()===miId)) actual.value=r.operacion
   } catch { /* conservamos datos de la lista */ }
   finally { cargandoDetalle.value=false }
 }
@@ -87,7 +93,7 @@ onUnmounted(()=>{dejarPrecios?.();window.removeEventListener('keydown',tecla)})
     <section class="rounded-2xl border border-[#e0e9e6] bg-white p-4 shadow-sm">
       <div class="mb-3 flex flex-wrap items-center justify-between gap-3"><div><h3 class="font-semibold">Filtros de búsqueda</h3><p class="text-xs text-slate-500">Selección inmediata · Se aplican a los registros cargados</p></div><div class="flex items-center gap-2"><button type="button" :disabled="cargando" class="inline-flex h-9 min-w-[112px] items-center justify-center gap-2 rounded-lg border border-emerald-600 bg-emerald-600 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-400 disabled:cursor-wait disabled:opacity-60" @click="actualizar"><span aria-hidden="true">↻</span>{{ cargando ? 'Actualizando...' : 'Actualizar' }}</button><button type="button" class="inline-flex h-9 min-w-[90px] items-center justify-center rounded-lg border border-slate-300 bg-slate-50 px-4 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-slate-400" @click="limpiar">Limpiar</button></div></div>
       <div class="grid grid-cols-2 gap-2 md:grid-cols-4 2xl:grid-cols-7">
-        <label class="text-xs text-slate-500">Suscriptor<select v-model="suscriptor" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm"><option value="">Todos</option><option v-for="v in opciones('suscriptor')" :key="v">{{v}}</option></select></label>
+        <label v-if="!mostrarSoloMias" class="text-xs text-slate-500">Suscriptor<select v-model="suscriptor" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm"><option value="">Todos</option><option v-for="v in opciones('suscriptor')" :key="v">{{v}}</option></select></label>
         <label class="text-xs text-slate-500">Estado<select v-model="estado" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm"><option value="">Todos</option><option v-for="v in opciones('estado')" :key="v">{{v}}</option></select></label>
         <label class="text-xs text-slate-500">Exchange<select v-model="exchange" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm"><option value="">Todos</option><option v-for="v in opciones('exchange')" :key="v">{{v}}</option></select></label>
         <label class="text-xs text-slate-500">Símbolo<select v-model="simbolo" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm"><option value="">Todos</option><option v-for="v in opciones('simbolo')" :key="v">{{v}}</option></select></label>

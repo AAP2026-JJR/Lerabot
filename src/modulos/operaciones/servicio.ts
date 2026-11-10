@@ -1,10 +1,14 @@
 import type { OperacionSpot, RespuestaOperaciones, ResumenOperaciones } from './tipos'
 import { consultarMercado } from '../mercado/servicio'
+import { sesionDemo } from '../login/sesionDemo'
+// F10_4_DEMO_FILTRO: solo experiencia visual; el ID no autentica al usuario.
 
 const BASE = (import.meta.env.VITE_OPERACIONES_API_URL as string | undefined)?.replace(/\/$/, '') || 'https://fnpeg3edxj.execute-api.sa-east-1.amazonaws.com/prd/operaciones'
 async function leer<T>(ruta: string, filtros: Record<string,string> = {}): Promise<T> {
   const url = new URL(BASE + ruta)
   for (const [k,v] of Object.entries(filtros)) if(v) url.searchParams.set(k,v)
+  const s=sesionDemo()
+  if(s?.rol==='SUBSCRIBER' && s.subscriberId) url.searchParams.set('suscriptor',s.subscriberId)
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 15000)
   try {
