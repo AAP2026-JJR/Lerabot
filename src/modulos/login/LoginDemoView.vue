@@ -65,7 +65,7 @@ async function entrar() {
       </div>
     </section>
     <aside class="relative hidden min-h-0 overflow-hidden bg-[#001c25] lg:block" aria-label="Vista ilustrativa de LERABOT">
-      <img src="/lerabot-login-panel.png" alt="Vista gráfica de LERABOT con gráficos y seguimiento de portafolio" class="absolute inset-0 h-full w-full object-cover object-center" />
+      <img src="/lerabot-login-panel.png" alt="Vista gráfica de LERABOT con gráficos y seguimiento de portafolio" class="absolute inset-0 h-full w-full object-contain object-center" />
     </aside>
     <div v-if="dialogoAcceso" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4" role="presentation">
       <section role="dialog" aria-modal="true" aria-labelledby="titulo-acceso" class="w-full max-w-sm rounded-[26px] bg-white p-7 text-slate-900 shadow-2xl">
