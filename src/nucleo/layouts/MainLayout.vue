@@ -6,7 +6,7 @@ import Encabezado from '@/compartido/componentes/Encabezado.vue'
 const route = useRoute()
 const menuAbierto = ref(false)
 const compacto = ref(false)
-const titulo = computed(() => String(route.meta.titulo ?? 'LERABOT'))
+const titulo = computed(() => String(route.meta.titulo ?? 'LedaBot'))
 watch(() => route.fullPath, () => { menuAbierto.value = false })
 onMounted(() => { try { compacto.value = localStorage.getItem('lerabot_sidebar_compacto') === '1' } catch { /* almacenamiento no disponible */ } })
 function alternar() { compacto.value = !compacto.value; try { localStorage.setItem('lerabot_sidebar_compacto', compacto.value ? '1' : '0') } catch { /* opcional */ } }

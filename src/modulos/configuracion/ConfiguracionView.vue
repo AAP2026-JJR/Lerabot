@@ -57,7 +57,7 @@ onMounted(() => { void cargar() })
   <div class="min-w-0 space-y-6">
     <header class="flex flex-wrap items-start justify-between gap-4">
       <div><h2 class="text-2xl font-bold text-[#102c37]">Configuración</h2>
-        <p class="mt-1 text-sm text-slate-500">Parámetros centralizados de LERABOT. Los cambios se guardan al pulsar Guardar cambios.</p></div>
+        <p class="mt-1 text-sm text-slate-500">Parámetros centralizados de LedaBot. Los cambios se guardan al pulsar Guardar cambios.</p></div>
       <span class="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Datos de prueba</span>
     </header>
     <div v-if="!originalAws" class="space-y-3 rounded-2xl border bg-white p-5">

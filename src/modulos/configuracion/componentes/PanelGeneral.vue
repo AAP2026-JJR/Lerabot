@@ -15,7 +15,7 @@ const { monedaBase } = storeToRefs(preferencias)
       </select>
       <p class="mt-3 text-xs text-slate-500">Esta preferencia se guarda solo en memoria. No convierte importes ni se persiste en AWS.</p>
     </TarjetaBase>
-    <TarjetaBase titulo="Apariencia" descripcion="Identidad visual de LERABOT">
+    <TarjetaBase titulo="Apariencia" descripcion="Identidad visual de LedaBot">
       <div class="flex items-center gap-3"><span class="h-10 w-10 rounded-xl bg-[#00856a]" aria-hidden="true"/><div><p class="font-semibold">Propuesta 4 · Verde turquesa</p><p class="text-xs text-slate-500">Tema claro · Sin cambios de apariencia disponibles</p></div></div>
     </TarjetaBase>
   </div>

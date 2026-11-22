@@ -4,9 +4,6 @@ import { useRouter } from 'vue-router'
 const correo = ref('')
 const error = ref('')
 const cargando = ref(false)
-const dialogoAcceso = ref(false)
-const nombrePerfil = ref('')
-const rolPerfil = ref('')
 const router = useRouter()
 async function entrar() {
   if (cargando.value) return
@@ -24,9 +21,7 @@ async function entrar() {
     }
     // Identificacion visual; no habilita permisos de backend.
     sessionStorage.setItem('lerabot_perfil_visual', JSON.stringify({email:correo.value.trim().toLowerCase(),...result.profile}))
-    nombrePerfil.value = result.profile.displayName || 'Usuario'
-    rolPerfil.value = result.profile.role
-    dialogoAcceso.value = true
+    await router.push('/dashboard')
   } catch(e) {error.value=e instanceof Error?e.message:'Error de conexion'}
   finally {cargando.value=false}
 }
@@ -39,12 +34,12 @@ async function entrar() {
         <div class="login-brand mb-9 flex items-center gap-4">
           <div class="grid h-[64px] w-[64px] shrink-0 place-items-center rounded-[20px] bg-gradient-to-br from-emerald-500 to-emerald-700 text-[38px] font-black text-white shadow-sm">L</div>
           <div>
-            <p class="text-3xl font-extrabold tracking-tight text-slate-950">LERABOT</p>
+            <p class="text-3xl font-extrabold tracking-tight text-slate-950">LedaBot</p>
             <p class="mt-1 text-base text-slate-500 sm:text-lg">Tu portafolio cripto, más inteligente</p>
           </div>
         </div>
         <header class="login-welcome mb-8">
-          <h1 class="text-[clamp(1.85rem,2.8vw,3rem)] font-extrabold leading-tight tracking-tight text-slate-950">Bienvenido a LERABOT</h1>
+          <h1 class="text-[clamp(1.85rem,2.8vw,3rem)] font-extrabold leading-tight tracking-tight text-slate-950">Bienvenido a LedaBot</h1>
           <p class="mt-3 text-lg text-slate-500 sm:text-xl">Ingresa tu correo para continuar hacia tu panel.</p>
         </header>
         <form class="login-form space-y-5" @submit.prevent="entrar">
@@ -64,18 +59,10 @@ async function entrar() {
         <p class="login-notice mt-6 flex items-center gap-2 text-sm text-slate-500"><svg class="h-5 w-5 shrink-0 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg> Tu panel de seguimiento de portafolio.</p>
       </div>
     </section>
-    <aside class="relative hidden min-h-0 overflow-hidden bg-[#001c25] lg:block" aria-label="Vista ilustrativa de LERABOT">
-      <img src="/lerabot-login-panel.png" alt="Vista gráfica de LERABOT con gráficos y seguimiento de portafolio" class="absolute inset-0 h-full w-full object-contain object-center" />
+    <aside class="relative hidden min-h-0 overflow-hidden bg-[#001c25] lg:block" aria-label="Vista ilustrativa de LedaBot">
+      <img src="/ledabot-login-panel.png" alt="" aria-hidden="true" class="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl opacity-40" />
+      <img src="/ledabot-login-panel.png" alt="LedaBot: plataforma de seguimiento de activos digitales" class="relative z-10 h-full w-full object-contain object-center" />
     </aside>
-    <div v-if="dialogoAcceso" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4" role="presentation">
-      <section role="dialog" aria-modal="true" aria-labelledby="titulo-acceso" class="w-full max-w-sm rounded-[26px] bg-white p-7 text-slate-900 shadow-2xl">
-        <div class="mb-4 grid size-14 place-items-center rounded-full bg-emerald-50 text-3xl font-bold text-emerald-700">✓</div>
-        <h2 id="titulo-acceso" class="text-xl font-extrabold">Perfil encontrado</h2>
-        <p class="mt-2 text-sm text-slate-600">Bienvenido, <strong>{{ nombrePerfil }}</strong>. Tu vista se abrira con el rol <strong>{{ rolPerfil === 'ADMIN' ? 'Administrador' : 'Suscriptor' }}</strong>.</p>
-        <p class="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">Acceso de demostracion: identificar un correo no autentica a su propietario. Las funciones privadas requieren autenticacion segura.</p>
-        <button class="mt-5 w-full rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white" @click="router.push('/dashboard')">Continuar al dashboard</button>
-      </section>
-    </div>
   </main>
 </template>
 

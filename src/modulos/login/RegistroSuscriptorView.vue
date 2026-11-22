@@ -48,7 +48,7 @@ async function crear() {
       <button type="button" class="text-sm font-medium text-emerald-700 hover:underline" @click="router.push('/login')">← Volver al login</button>
       <div class="mt-6 mb-7 flex items-center gap-3">
         <div class="grid size-12 shrink-0 place-items-center rounded-2xl bg-emerald-600 text-2xl font-black text-white">L</div>
-        <div><h1 class="text-2xl font-extrabold tracking-tight">Crear cuenta</h1><p class="text-sm text-slate-500">LERABOT · Nuevo suscriptor</p></div>
+        <div><h1 class="text-2xl font-extrabold tracking-tight">Crear cuenta</h1><p class="text-sm text-slate-500">LedaBot · Nuevo suscriptor</p></div>
       </div>
       <form class="space-y-4" @submit.prevent="revisar">
         <div><label for="nombre" class="mb-1.5 block text-sm font-semibold">Nombre completo</label><input id="nombre" v-model.trim="nombre" required minlength="3" maxlength="100" autocomplete="name" class="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" placeholder="Nombre y apellido" /></div>

@@ -65,7 +65,7 @@ onUnmounted(()=>{soltar?.();if(temporizador)clearInterval(temporizador)})
 <template>
   <div class="space-y-4 text-[#102c37] sm:space-y-5">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div><div class="mb-1 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.17em] text-emerald-700"><span class="h-2 w-2 rounded-full bg-emerald-500"/> LERABOT · Centro financiero</div><h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">Tu panorama financiero</h2><p class="text-sm text-slate-500">Resultados estimados a partir de operaciones registradas y cotizaciones recientes.</p></div>
+      <div><div class="mb-1 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.17em] text-emerald-700"><span class="h-2 w-2 rounded-full bg-emerald-500"/> LedaBot · Centro financiero</div><h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">Tu panorama financiero</h2><p class="text-sm text-slate-500">Resultados estimados a partir de operaciones registradas y cotizaciones recientes.</p></div>
       <button class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#008b69] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#006f56] disabled:opacity-50" :disabled="cargando" @click="cargar"><span aria-hidden="true">↻</span>{{cargando?'Actualizando…':'Actualizar operaciones'}}</button>
     </div>
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
