@@ -17,6 +17,7 @@ const router = createRouter({
         { path: 'dashboard', name: 'dashboard', component: () => import('@/modulos/dashboard/DashboardView.vue'), meta: { titulo: 'Dashboard' } },
         { path: 'mercado', name: 'mercado', component: () => import('@/modulos/mercado/MercadoView.vue'), meta: { titulo: 'Mercado' } },
         { path: 'exchanges', name: 'exchanges', component: () => import('@/modulos/exchanges/ExchangesView.vue'), meta: { titulo: 'Exchanges' } },
+        { path: 'billetera', name: 'billetera', component: () => import('@/modulos/billetera/BilleteraView.vue'), meta: { titulo: 'Billetera' } },
         { path: 'portafolio', name: 'portafolio', component: () => import('@/modulos/portafolio/PortafolioView.vue'), meta: { titulo: 'Portafolio' } },
         { path: 'operaciones', name: 'operaciones', redirect: '/exchanges' },
         { path: 'reportes', name: 'reportes', component: () => import('@/modulos/reportes/ReportesView.vue'), meta: { titulo: 'Reportes' } },

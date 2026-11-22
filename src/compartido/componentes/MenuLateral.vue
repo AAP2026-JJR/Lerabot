@@ -9,6 +9,7 @@ const opcionesBase = [
   { ruta: '/dashboard', titulo: 'Dashboard', icono: '▦' },
   { ruta: '/mercado', titulo: 'Mercado', icono: '◉' },
   { ruta: '/exchanges', titulo: 'Exchanges', icono: '⇄' },
+  { ruta: '/billetera', titulo: 'Billetera', icono: '◉' },
   { ruta: '/portafolio', titulo: 'Portafolio', icono: '◈' },
   { ruta: '/reportes', titulo: 'Reportes', icono: '▤' },
   { ruta: '/configuracion', titulo: 'Configuración', icono: '⚙' },
