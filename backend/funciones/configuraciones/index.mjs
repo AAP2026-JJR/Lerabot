@@ -213,14 +213,33 @@ function validarConfiguracion(defaults, features) {
     'maxRetries',
     'minSignalQuality',
     'region',
-    'stage'
+    'stage',
+    'tradingStyles'
   ];
 
-  if (!clavesExactas(
-    defaults,
-    camposDefaults
-  )) {
+  // tradingStyles es opcional para registros anteriores, pero no se puede descartar
+  // al guardar un documento que lo trae desde DynamoDB.
+  if (!clavesValidas(defaults, camposDefaults) ||
+      !camposDefaults.filter(c => c !== 'tradingStyles')
+        .every(c => Object.hasOwn(defaults, c))) {
     return false;
+  }
+
+  if (Object.hasOwn(defaults, 'tradingStyles')) {
+    const styles = defaults.tradingStyles;
+    if (!objeto(styles) || Object.keys(styles).length > 30) return false;
+    for (const [name, style] of Object.entries(styles)) {
+      if (!/^[A-Z][A-Z0-9_]{0,31}$/.test(name) ||
+          !clavesValidas(style, ['balancePercent', 'riskPercent', 'timeframe', 'tradeType']) ||
+          !['balancePercent','timeframe','tradeType'].every(k => Object.hasOwn(style,k)) ||
+          !numero(style.balancePercent,0,100) ||
+          (Object.hasOwn(style,'riskPercent') && !numero(style.riskPercent,0,100)) ||
+          typeof style.timeframe !== 'string' ||
+          !/^(?:[0-9]{1,4}|D|W|M)$/.test(style.timeframe) ||
+          !['SPOT','FUTURES'].includes(style.tradeType)) {
+        return false;
+      }
+    }
   }
 
   // ---------- Riesgos ----------
@@ -466,6 +485,19 @@ export const handler = async (event = {}) => {
       }, event);
     }
 
+    // Preservar estilos almacenados si llega un cliente legacy sin tradingStyles.
+    const registroActual = await db.send(new GetCommand({
+      TableName: tabla, Key: CLAVE, ConsistentRead: true
+    }));
+    if (!registroActual.Item) {
+      return responder(404, {ok:false,error:'Configuracion no encontrada'}, event);
+    }
+    const estilosExistentes = registroActual.Item.defaults?.tradingStyles;
+    const defaultsGuardar = Object.hasOwn(body.defaults, 'tradingStyles')
+      ? body.defaults
+      : { ...body.defaults,
+          ...(estilosExistentes === undefined ? {} : {tradingStyles: estilosExistentes}) };
+
     const fecha = new Date().toISOString();
 
     const resultado = await db.send(
@@ -501,7 +533,7 @@ export const handler = async (event = {}) => {
         },
 
         ExpressionAttributeValues: {
-          ':defaults': body.defaults,
+          ':defaults': defaultsGuardar,
           ':features': body.features,
           ':updated': fecha,
           ':expected': body.version,

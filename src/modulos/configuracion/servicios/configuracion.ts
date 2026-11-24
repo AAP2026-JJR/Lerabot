@@ -1,4 +1,5 @@
 import type { ConfiguracionGlobal } from '../datos/configuracion-catalogo'
+import { tokenId } from './autenticacion'
 
 export interface DocumentoConfiguracion extends ConfiguracionGlobal {
   version: number
@@ -16,10 +17,12 @@ function endpoint(): string {
 async function peticion(metodo: 'GET' | 'PUT', body?: object): Promise<DocumentoConfiguracion> {
   let respuesta: Response
   try {
+    const token = metodo === 'PUT' ? await tokenId() : null
     respuesta = await fetch(endpoint(), {
       method: metodo,
       headers: { Accept: 'application/json',
-        ...(body ? { 'Content-Type': 'application/json' } : {}) },
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}),
       cache: 'no-store',
     })

@@ -12,6 +12,13 @@ export interface ConfiguracionGlobal {
     enabledTimeframes: { SPOT: string[]; FUTURES: string[] }
     logging: { level: string; structured: boolean; enablePerformanceMetrics: boolean; enableSummaryLogs: boolean }
     exchanges: Record<string, ExchangeConfigurado>
+    /** Estilos globales que vienen de DynamoDB; conservarlos en el PUT. */
+    tradingStyles?: Record<string, {
+      balancePercent: number
+      riskPercent?: number
+      timeframe: string
+      tradeType: 'SPOT' | 'FUTURES'
+    }>
   }
   features: {
     enableSpotTrading: boolean
