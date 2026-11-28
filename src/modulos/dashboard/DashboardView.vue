@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { listarOperaciones } from '../operaciones/servicio'
 import type { OperacionSpot } from '../operaciones/tipos'
 import { observarCotizaciones, cotizacionesVivas, cotizacionActual, estadoCotizaciones } from '../mercado/cotizacionesVivas'
@@ -20,15 +20,30 @@ const idSuscriptor = (o: OperacionSpot) => /^SUB#([^#]+)/i.exec(o.PK)?.[1]?.toLo
 // F16: todos los indicadores comparten exactamente el mismo subconjunto de operaciones.
 const filtroExchange = ref('TODOS')
 const filtroSuscriptor = ref('TODOS')
+const railRef=ref<HTMLElement|null>(null)
+const railShift=(direction:number)=>railRef.value?.scrollBy({left:direction*310,behavior:'smooth'})
+const colorExchange=(name:string)=>name==='bingx'?'from-emerald-500 to-teal-600':name==='tangem'?'from-violet-500 to-indigo-600':'from-sky-500 to-cyan-600'
+const colorMoneda=(name:string)=>name.startsWith('BTC')?'bg-amber-100 text-amber-800':name.startsWith('ETH')?'bg-indigo-100 text-indigo-700':name.startsWith('SOL')?'bg-violet-100 text-violet-700':name.startsWith('XRP')?'bg-sky-100 text-sky-800':name.startsWith('BNB')?'bg-yellow-100 text-yellow-800':'bg-emerald-100 text-emerald-800'
+
 const nombreExchange = (o: OperacionSpot) => String(o.exchangeId ?? '').trim().toLowerCase() || 'sin exchange'
 const universo = computed(() => esAdmin ? filas.value : filas.value.filter(o => idSuscriptor(o) === (sesion?.subscriberId ?? '').toLowerCase()))
 const exchangesDisponibles = computed(() => [...new Set(universo.value.map(nombreExchange))].sort())
 const suscriptoresDisponibles = computed(() => [...new Set(universo.value.map(idSuscriptor).filter(Boolean))].sort())
+const tarjetasExchange=computed(()=>exchangesDisponibles.value.map(nombre=>{
+ const todos=universo.value.filter(o=>nombreExchange(o)===nombre && (!esAdmin || filtroSuscriptor.value==='TODOS' || idSuscriptor(o)===filtroSuscriptor.value))
+ const buys=todos.filter(o=>String(o.side||'').toUpperCase()==='BUY')
+ const importe=buys.reduce((s,o)=>{const qty=Number(o.quantity),price=Number(o.buyPrice);return s+(Number.isFinite(qty)&&qty>0&&Number.isFinite(price)&&price>0?qty*price:0)},0)
+ return {nombre,registros:todos.length,compras:buys.length,importe}
+}).filter(x=>x.registros>0))
+const totalesTarjetas=computed(()=>({registros:tarjetasExchange.value.reduce((s,x)=>s+x.registros,0),compras:tarjetasExchange.value.reduce((s,x)=>s+x.compras,0),importe:tarjetasExchange.value.reduce((s,x)=>s+x.importe,0)}))
+
 const seleccionadas = computed(() => universo.value.filter(o =>
   (filtroExchange.value === 'TODOS' || nombreExchange(o) === filtroExchange.value) &&
   (!esAdmin || filtroSuscriptor.value === 'TODOS' || idSuscriptor(o) === filtroSuscriptor.value)
 ))
 function limpiarFiltros() { filtroExchange.value = 'TODOS'; filtroSuscriptor.value = 'TODOS' }
+watch(filtroSuscriptor,()=>{if(filtroExchange.value!=='TODOS'&&!tarjetasExchange.value.some(x=>x.nombre===filtroExchange.value))filtroExchange.value='TODOS'})
+
 
 const compras = computed(() => seleccionadas.value.filter(o => String(o.side).toUpperCase() === 'BUY'))
 const precioVivo = (simbolo: string) => { void cotizacionesVivas.value; void ahora.value; return cotizacionActual(simbolo) }
@@ -52,6 +67,9 @@ const potencial = computed(() => tpCompleto.value ? conPrecio.value.reduce((s,x)
 const porActivo = computed(() => Object.entries(conPrecio.value.reduce<Record<string,number>>((m,x)=>{const s=String(x.o.symbol??'').toUpperCase();m[s]=(m[s]??0)+(x.costo??0);return m},{})).sort((a,b)=>b[1]-a[1]))
 const porSuscriptor = computed(() => Object.entries(filas.value.reduce<Record<string,number>>((m,o)=>{const id=idSuscriptor(o);if(id)m[id]=(m[id]??0)+1;return m},{})).sort((a,b)=>b[1]-a[1]))
 const maxCapital = computed(() => Math.max(...porActivo.value.map(x=>x[1]),1))
+const cantidadExchanges=computed(()=>porExchange.value.length)
+const cantidadActivos=computed(()=>porActivo.value.length)
+
 // Estadísticas derivadas de COMPRAS observadas; no son balances reales de exchanges.
 const porExchange = computed(() => {
   const grupos = new Map<string, { invertido:number; valor:number; completos:boolean; operaciones:number }>()
@@ -134,11 +152,8 @@ onUnmounted(()=>{soltar?.();if(temporizador)clearInterval(temporizador)})
     <div v-if="error" class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{{error}}</div>
     <!-- F16: Filtro global por exchange y, para ADMIN, suscriptor. Afecta TODOS los KPI y gráficos. -->
     <section v-if="pestaña==='finanzas' || !esAdmin" class="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm sm:p-5" aria-label="Filtros globales del dashboard">
-      <div class="mb-3 flex flex-wrap items-center justify-between gap-2"><div><h3 class="font-bold">Filtros de portafolio</h3><p class="text-xs text-slate-500">Se aplican a capital, valor, PnL, ROI, gráficos y operaciones.</p></div><button class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="limpiarFiltros">Limpiar filtros</button></div>
-      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <label class="block text-xs font-semibold text-slate-600">Exchange
-          <select v-model="filtroExchange" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800"><option value="TODOS">Todos los exchanges</option><option v-for="e in exchangesDisponibles" :key="e" :value="e">{{e}}</option></select>
-        </label>
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2"><div><h3 class="font-bold">Explora tu portafolio</h3><p class="text-xs text-slate-500">Selecciona una plataforma. Todos los indicadores, gráficos y operaciones se actualizan juntos.</p></div><button class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50" @click="limpiarFiltros">Limpiar filtros</button></div>
+      <div class="grid gap-3 sm:grid-cols-2">
         <label v-if="esAdmin" class="block text-xs font-semibold text-slate-600">Suscriptor
           <select v-model="filtroSuscriptor" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800"><option value="TODOS">Todos los suscriptores</option><option v-for="id in suscriptoresDisponibles" :key="id" :value="id">{{id}}</option></select>
         </label>
@@ -146,8 +161,20 @@ onUnmounted(()=>{soltar?.();if(temporizador)clearInterval(temporizador)})
       </div>
       <p v-if="!seleccionadas.length" class="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">No hay operaciones para la selección actual. Los importes se recalculan sin inventar saldos.</p>
     </section>
+    <section v-if="pestaña==='finanzas' || !esAdmin" aria-label="Seleccionar exchange" class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+      <div class="mb-3 flex items-center justify-between gap-3"><div><h3 class="font-bold">Cuentas y plataformas</h3><p class="text-xs text-slate-500">Compras registradas por exchange; no son saldos disponibles</p></div><div class="flex gap-1"><button type="button" aria-label="Desplazar tarjetas a la izquierda" class="rounded-lg border px-2.5 py-2 text-slate-600 hover:bg-slate-50" @click="railShift(-1)">‹</button><button type="button" aria-label="Desplazar tarjetas a la derecha" class="rounded-lg border px-2.5 py-2 text-slate-600 hover:bg-slate-50" @click="railShift(1)">›</button></div></div>
+      <div ref="railRef" class="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:thin]">
+        <button type="button" :aria-pressed="filtroExchange==='TODOS'" class="min-w-[230px] max-w-[280px] flex-1 shrink-0 snap-start rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md" :class="filtroExchange==='TODOS'?'border-emerald-500 bg-emerald-50 shadow-sm':'border-slate-200 bg-white'" @click="filtroExchange='TODOS'">
+          <div class="flex items-center gap-2"><span class="grid h-10 w-10 place-items-center rounded-xl bg-emerald-100 text-xl text-emerald-700">▦</span><span class="font-bold">Todas las plataformas</span></div><p class="mt-3 text-xs text-slate-500">{{totalesTarjetas.registros}} registros · {{totalesTarjetas.compras}} compras</p><p class="mt-1 text-xl font-extrabold tabular-nums">{{usd(totalesTarjetas.importe)}}</p><span class="mt-2 block text-[11px] text-slate-500">Capital registrado</span>
+        </button>
+        <button v-for="x in tarjetasExchange" :key="x.nombre" type="button" :aria-pressed="filtroExchange===x.nombre" class="min-w-[230px] max-w-[280px] flex-1 shrink-0 snap-start rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md" :class="filtroExchange===x.nombre?'border-emerald-500 bg-emerald-50 shadow-sm':'border-slate-200 bg-white'" @click="filtroExchange=x.nombre">
+          <div class="flex items-center gap-2"><span class="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br font-extrabold uppercase text-white" :class="colorExchange(x.nombre)">{{x.nombre.slice(0,2)}}</span><span class="font-bold capitalize">{{x.nombre}}</span></div><p class="mt-3 text-xs text-slate-500">{{x.registros}} registros · {{x.compras}} compras</p><p class="mt-1 text-xl font-extrabold tabular-nums">{{usd(x.importe)}}</p><span class="mt-2 block text-[11px] text-slate-500">Capital registrado</span>
+        </button>
+      </div>
+    </section>
     <template v-if="pestaña==='finanzas' || !esAdmin">
       <p class="text-xs font-medium text-slate-500">{{esAdmin?'Vista administrativa filtrada':'Mi portafolio filtrado'}} · {{compras.length}} compras registradas · {{valoracionCompleta?'Cotizaciones disponibles':'Esperando precios recientes'}}</p>
+      <div class="flex flex-wrap items-center gap-2 text-xs"><span class="rounded-full bg-sky-50 px-3 py-1.5 font-semibold text-sky-700">◈ {{cantidadExchanges}} exchange(s) seleccionados</span><span class="rounded-full bg-amber-50 px-3 py-1.5 font-semibold text-amber-700">◉ {{cantidadActivos}} activos</span><span class="rounded-full bg-slate-100 px-3 py-1.5 font-semibold text-slate-600">▦ {{compras.length}} compras</span></div>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4">
         <article class="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm sm:p-5"><div class="absolute -right-7 -top-7 h-24 w-24 rounded-full bg-emerald-50"/><div class="relative"><div class="flex items-center justify-between"><p class="text-sm font-medium text-slate-500">Capital invertido</p><span class="rounded-lg bg-emerald-50 px-2 py-1 text-emerald-700">▣</span></div><p class="mt-3 break-words text-[clamp(1.4rem,2.2vw,2rem)] font-extrabold tracking-tight tabular-nums">{{usd(capital)}}</p><p class="mt-2 text-xs text-slate-500">Compras registradas · USD</p></div></article>
         <article class="relative overflow-hidden rounded-2xl border border-sky-100 bg-white p-4 shadow-sm sm:p-5"><div class="absolute -right-7 -top-7 h-24 w-24 rounded-full bg-sky-50"/><div class="relative"><div class="flex items-center justify-between"><p class="text-sm font-medium text-slate-500">Valor de posiciones</p><span class="rounded-lg bg-sky-50 px-2 py-1 text-sky-700">◉</span></div><p class="mt-3 break-words text-[clamp(1.4rem,2.2vw,2rem)] font-extrabold tracking-tight tabular-nums">{{usd(valorActual)}}</p><p class="mt-2 text-xs text-slate-500">Valuación estimada al precio actual</p></div></article>
@@ -155,7 +182,7 @@ onUnmounted(()=>{soltar?.();if(temporizador)clearInterval(temporizador)})
         <article class="relative overflow-hidden rounded-2xl border bg-white p-4 shadow-sm sm:p-5" :class="roi===null?'border-slate-200':roi<0?'border-rose-200':'border-emerald-200'"><div class="flex items-center justify-between"><p class="text-sm font-medium text-slate-500">ROI no realizado</p><span class="rounded-lg px-2 py-1" :class="roi===null?'bg-slate-50 text-slate-500':roi<0?'bg-rose-50 text-rose-600':'bg-emerald-50 text-emerald-700'">%</span></div><p class="mt-3 break-words text-[clamp(1.4rem,2.2vw,2rem)] font-extrabold tracking-tight tabular-nums" :class="roi===null?'text-slate-600':roi<0?'text-rose-600':'text-emerald-600'">{{porcentaje(roi)}}</p><p class="mt-2 text-xs text-slate-500">Rentabilidad sobre capital de compra</p></article>
       </div>
       <div class="grid gap-3 xl:grid-cols-5">
-        <section class="rounded-2xl border border-[#e3ebe8] bg-white p-4 shadow-sm sm:p-5 xl:col-span-3"><div class="flex flex-wrap items-start justify-between gap-2"><div><h3 class="font-bold">Distribución de inversión</h3><p class="mt-1 text-xs text-slate-500">Capital por moneda, según compras en DynamoDB</p></div><span class="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">{{porActivo.length}} activos</span></div><div v-for="[nombre,importe] in porActivo" :key="nombre" class="mt-5"><div class="mb-2 flex items-center justify-between gap-2 text-sm"><span class="font-semibold text-slate-800">{{nombre}}</span><span class="font-semibold tabular-nums">{{usd(importe)}} <span class="ml-1 text-xs font-normal text-slate-400">{{capital? (100*importe/capital).toFixed(1):'0.0'}}%</span></span></div><div class="h-3 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-gradient-to-r from-emerald-600 to-teal-400 transition-all duration-500" :style="{width:(100*importe/maxCapital)+'%'}"/></div></div><p v-if="!porActivo.length" class="mt-8 text-sm text-slate-500">Todavía no hay compras registradas.</p></section>
+        <section class="rounded-2xl border border-[#e3ebe8] bg-white p-4 shadow-sm sm:p-5 xl:col-span-3"><div class="flex flex-wrap items-start justify-between gap-2"><div><h3 class="font-bold">Distribución de inversión</h3><p class="mt-1 text-xs text-slate-500">Capital por moneda, según compras en DynamoDB</p></div><span class="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">{{porActivo.length}} activos</span></div><div v-for="[nombre,importe] in porActivo" :key="nombre" class="mt-5"><div class="mb-2 flex items-center justify-between gap-2 text-sm"><span class="inline-flex rounded-lg px-2 py-1 text-xs font-bold" :class="colorMoneda(nombre)">{{nombre}}</span><span class="font-semibold tabular-nums">{{usd(importe)}} <span class="ml-1 text-xs font-normal text-slate-400">{{capital? (100*importe/capital).toFixed(1):'0.0'}}%</span></span></div><div class="h-3 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-gradient-to-r from-emerald-600 to-teal-400 transition-all duration-500" :style="{width:(100*importe/maxCapital)+'%'}"/></div></div><p v-if="!porActivo.length" class="mt-8 text-sm text-slate-500">Todavía no hay compras registradas.</p></section>
         <section class="relative overflow-hidden rounded-2xl border border-[#c5e9dd] bg-gradient-to-br from-[#073a32] via-[#075747] to-[#008b69] p-5 text-white shadow-sm xl:col-span-2"><div class="absolute -right-10 -top-10 h-40 w-40 rounded-full border border-white/10"/><div class="relative"><div class="flex justify-between gap-2"><div><h3 class="font-bold">Objetivos Take Profit</h3><p class="mt-1 text-xs text-white/70">Proyección bruta si se ejecutan los TP</p></div><span class="rounded-lg bg-white/10 px-3 py-2 text-lg">◎</span></div><p class="mt-8 break-words text-3xl font-extrabold tabular-nums sm:text-4xl">{{usd(potencial)}}</p><p class="mt-3 text-xs leading-relaxed text-emerald-100">{{potencial===null?'Faltan objetivos TP válidos en algunas compras.':'Suma de ganancias potenciales de los objetivos registrados.'}}</p><div class="mt-5 border-t border-white/20 pt-3 text-xs text-white/75">Los TP colocados no son ganancias realizadas.</div></div></section>
       </div>
       <!-- Gráficos F16: todos calculados de la selección global y sin datos de demostración. -->
@@ -163,7 +190,7 @@ onUnmounted(()=>{soltar?.();if(temporizador)clearInterval(temporizador)})
         <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <h3 class="font-bold">Inversión por exchange</h3>
           <p class="mt-1 text-xs text-slate-500">Distribución de compras registradas. No son saldos disponibles.</p>
-          <div v-for="x in porExchange" :key="x.nombre" class="mt-4">
+          <div v-for="x in porExchange" :key="x.nombre" class="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3">
             <div class="mb-1 flex flex-wrap justify-between gap-2 text-sm"><span class="font-semibold capitalize">{{x.nombre}} · {{x.operaciones}} compras</span><span class="tabular-nums">{{usd(x.invertido)}} · {{capital>0?(100*x.invertido/capital).toFixed(1):'0.0'}}%</span></div>
             <div class="h-3 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-gradient-to-r from-sky-600 to-emerald-400" :style="{width:(capital>0?100*x.invertido/capital:0)+'%'}"/></div>
             <p class="mt-1 text-xs" :class="x.pnl===null?'text-slate-500':x.pnl<0?'text-rose-600':'text-emerald-700'">PnL estimado: {{usd(x.pnl)}}</p>
@@ -182,7 +209,7 @@ onUnmounted(()=>{soltar?.();if(temporizador)clearInterval(temporizador)})
       </div>
       <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div class="flex flex-wrap items-start justify-between gap-3"><div><h3 class="font-bold">Evolución de aportes registrados</h3><p class="mt-1 text-xs text-slate-500">Capital acumulado por fecha de compra. No representa crecimiento de valor ni rentabilidad histórica.</p></div><span class="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">{{usd(aportesDiarios.length?aportesDiarios[aportesDiarios.length-1]?.acumulado??0:0)}}</span></div>
-        <div v-if="aportesDiarios.length" class="mt-4">
+        <div v-if="aportesDiarios.length > 1" class="mt-4">
           <svg viewBox="0 0 600 195" preserveAspectRatio="none" role="img" aria-label="Curva de capital acumulado según fechas de compras registradas" class="h-44 w-full overflow-visible">
             <line x1="24" y1="175" x2="580" y2="175" stroke="#cbd5e1" stroke-width="1.5"/>
             <line x1="24" y1="40" x2="580" y2="40" stroke="#e2e8f0" stroke-dasharray="4 5"/>
@@ -190,9 +217,9 @@ onUnmounted(()=>{soltar?.();if(temporizador)clearInterval(temporizador)})
           </svg>
           <div class="flex justify-between gap-2 text-xs text-slate-500"><span>{{aportesDiarios[0]?.dia}}</span><span>{{aportesDiarios[aportesDiarios.length-1]?.dia}}</span></div>
         </div>
-        <p v-else class="mt-4 text-sm text-slate-500">No hay compras con fecha válida para elaborar la curva.</p>
+        <p v-else-if="aportesDiarios.length===1" class="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">Todas las compras registradas corresponden al {{aportesDiarios[0]?.dia}}. Se necesita más de una fecha para mostrar una evolución temporal sin inventar crecimiento.</p><p v-else class="mt-4 text-sm text-slate-500">No hay compras con fecha válida para elaborar la curva.</p>
       </section>
-      <section class="overflow-hidden rounded-2xl border border-[#e3ebe8] bg-white shadow-sm"><div class="flex flex-wrap items-start justify-between gap-2 px-4 pb-3 pt-4 sm:px-5 sm:pt-5"><div><h3 class="font-bold">Rendimiento por operación</h3><p class="mt-1 text-xs text-slate-500">Cotización de referencia · precio de compra histórico</p></div><span class="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">{{conPrecio.length}} compras</span></div><div class="overflow-x-auto"><table class="w-full min-w-[690px] text-left text-sm"><thead class="bg-[#f4f8f7] text-xs font-semibold uppercase tracking-wide text-slate-500"><tr><th class="p-3 sm:pl-5">Activo</th><th class="p-3">Invertido</th><th class="p-3">Precio actual</th><th class="p-3">Valor actual</th><th class="p-3">PnL</th><th class="p-3">ROI</th></tr></thead><tbody><tr v-for="x in conPrecio" :key="x.o.PK+x.o.SK" class="border-t border-slate-100 hover:bg-slate-50/70"><td class="p-3 font-semibold text-emerald-800 sm:pl-5">{{x.o.symbol}}</td><td class="p-3 tabular-nums">{{usd(x.costo)}}</td><td class="p-3 tabular-nums">{{usd(x.precio)}}</td><td class="p-3 tabular-nums">{{usd(x.actual)}}</td><td class="p-3 font-semibold tabular-nums" :class="x.pnl===null?'text-slate-400':x.pnl<0?'text-rose-600':'text-emerald-600'">{{usd(x.pnl)}}</td><td class="p-3 font-semibold tabular-nums" :class="x.pnl===null?'text-slate-400':x.pnl<0?'text-rose-600':'text-emerald-600'">{{porcentaje(x.pnl!==null&&x.costo?100*x.pnl/x.costo:null)}}</td></tr><tr v-if="!conPrecio.length"><td colspan="6" class="p-5 text-slate-500">No hay operaciones para mostrar.</td></tr></tbody></table></div></section>
+      <section class="overflow-hidden rounded-2xl border border-[#e3ebe8] bg-white shadow-sm"><div class="flex flex-wrap items-start justify-between gap-2 px-4 pb-3 pt-4 sm:px-5 sm:pt-5"><div><h3 class="font-bold">Rendimiento por operación</h3><p class="mt-1 text-xs text-slate-500">Cotización de referencia · precio de compra histórico</p></div><span class="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">{{conPrecio.length}} compras</span></div><div class="overflow-x-auto"><table class="w-full min-w-[690px] text-left text-sm"><thead class="bg-[#f4f8f7] text-xs font-semibold uppercase tracking-wide text-slate-500"><tr><th class="p-3 sm:pl-5">Activo</th><th class="p-3">Invertido</th><th class="p-3">Precio actual</th><th class="p-3">Valor actual</th><th class="p-3">PnL</th><th class="p-3">ROI</th></tr></thead><tbody><tr v-for="x in conPrecio" :key="x.o.PK+x.o.SK" class="border-t border-slate-100 hover:bg-slate-50/70"><td class="p-3 font-semibold sm:pl-5"><span class="rounded-lg px-2 py-1 text-xs" :class="colorMoneda(String(x.o.symbol??'').toUpperCase())">{{x.o.symbol}}</span></td><td class="p-3 tabular-nums">{{usd(x.costo)}}</td><td class="p-3 tabular-nums">{{usd(x.precio)}}</td><td class="p-3 tabular-nums">{{usd(x.actual)}}</td><td class="p-3 font-semibold tabular-nums" :class="x.pnl===null?'text-slate-400':x.pnl<0?'text-rose-600':'text-emerald-600'">{{usd(x.pnl)}}</td><td class="p-3 font-semibold tabular-nums" :class="x.pnl===null?'text-slate-400':x.pnl<0?'text-rose-600':'text-emerald-600'">{{porcentaje(x.pnl!==null&&x.costo?100*x.pnl/x.costo:null)}}</td></tr><tr v-if="!conPrecio.length"><td colspan="6" class="p-5 text-slate-500">No hay operaciones para mostrar.</td></tr></tbody></table></div></section>
     </template>
     <template v-else-if="esAdmin">
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2"><article class="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm"><div class="flex items-center justify-between"><p class="text-sm font-medium text-slate-500">Suscriptores con operaciones</p><span class="rounded-lg bg-violet-50 px-2 py-1 text-violet-600">♙</span></div><p class="mt-3 text-3xl font-extrabold text-violet-700">{{porSuscriptor.length}}</p><p class="mt-2 text-xs text-slate-500">No incluye perfiles sin movimientos.</p></article><article class="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm"><div class="flex items-center justify-between"><p class="text-sm font-medium text-slate-500">Operaciones registradas</p><span class="rounded-lg bg-emerald-50 px-2 py-1 text-emerald-600">↗</span></div><p class="mt-3 text-3xl font-extrabold text-emerald-700">{{filas.length}}</p><p class="mt-2 text-xs text-slate-500">Total devuelto por la API de Operaciones.</p></article></div>

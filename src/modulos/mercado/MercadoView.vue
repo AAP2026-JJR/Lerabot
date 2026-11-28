@@ -59,46 +59,45 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div class="space-y-3">
     <header class="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h2 class="text-2xl font-bold text-[#102c37]">Mercado de criptomonedas</h2>
-        <p class="mt-1 text-sm text-slate-500">Cotizaciones públicas en USD, independientes de tus cuentas conectadas.</p>
+        <div class="flex flex-wrap items-center gap-2"><span class="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800">● Cotizaciones públicas</span><span class="text-xs text-slate-500">USD · Spot</span></div>
       </div>
-      <button class="rounded-lg bg-[#00856a] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" :disabled="cargando" @click="actualizar">{{ cargando ? 'Actualizando…' : 'Actualizar ahora' }}</button>
+      <button class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50" :disabled="cargando" @click="actualizar"><span aria-hidden="true" :class="cargando?'inline-block animate-spin':'inline-block'">↻</span>{{ cargando ? 'Actualizando…' : 'Actualizar' }}</button>
     </header>
-    <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-      <span>Fuente: {{ fuente || 'pendiente de conexión' }}</span>
-      <span>· Precio: Binance Spot en vivo cuando esté disponible · Ranking: CoinGecko cada 5 min</span>
-      <span>· WebSocket: {{ estadoCotizaciones }}</span>
-      <span v-if="actualizado">· Datos: {{ new Date(actualizado).toLocaleString('es-PE') }}</span>
-      <span v-if="ultimaConsulta">· Consultado: {{ new Date(ultimaConsulta).toLocaleTimeString('es-PE') }}</span>
+    <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+      <span class="rounded-full border border-slate-200 bg-white px-3 py-1.5">◉ Fuente: {{ fuente || 'pendiente' }}</span>
+      <span class="rounded-full bg-slate-100 px-3 py-1.5">Precios de referencia · CoinGecko / Binance</span>
+      <span class="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-emerald-700">● WebSocket: {{ estadoCotizaciones }}</span>
+      <span v-if="actualizado" class="rounded-full bg-slate-100 px-3 py-1.5">Datos: {{ new Date(actualizado).toLocaleString('es-PE') }}</span>
+      <span v-if="ultimaConsulta" class="rounded-full bg-slate-100 px-3 py-1.5">Actualizado: {{ new Date(ultimaConsulta).toLocaleTimeString('es-PE') }}</span>
       <span v-if="desactualizado" class="font-semibold text-amber-700">· Últimos datos disponibles (no actuales)</span>
     </div>
     <div v-if="error" role="alert" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{{ error }}. No se muestran precios ficticios.</div>
     <section class="rounded-2xl border border-[#e3ebe8] bg-white p-4 shadow-sm sm:p-5">
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <label class="w-full max-w-sm text-sm text-slate-600">Buscar entre los resultados cargados
-          <input v-model="buscar" type="search" placeholder="Bitcoin, ETH, SOL…" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 outline-none focus:border-[#00856a]" />
+        <label class="w-full max-w-sm text-sm font-medium text-slate-700"><span aria-hidden="true">⌕</span> Buscar criptomoneda
+          <input v-model="buscar" type="search" placeholder="Bitcoin, ETH, SOL…" class="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 outline-none transition focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100" />
         </label>
         <span class="text-xs text-slate-500">Página {{ pagina }} · 50 monedas por página</span>
       </div>
       <div class="max-w-full overflow-x-auto rounded-xl border border-[#e3ebe8]">
         <table class="w-full min-w-[650px] text-left text-sm">
           <thead class="bg-[#f6f9f8] text-slate-500"><tr><th class="p-3">#</th><th class="p-3">Moneda</th><th class="p-3 text-right">Precio USD</th><th class="p-3 text-right">24 h</th><th class="p-3 text-right">Capitalización</th></tr></thead>
-          <tbody><tr v-for="moneda in resultado" :key="moneda.id" class="border-t border-slate-100">
+          <tbody><tr v-for="moneda in resultado" :key="moneda.id" class="border-t border-slate-100 transition-colors hover:bg-emerald-50/40">
             <td class="p-3 text-slate-500">{{ moneda.posicion ?? '—' }}</td>
-            <td class="p-3"><strong>{{ moneda.nombre }}</strong><span class="ml-2 text-xs text-slate-500">{{ moneda.simbolo }}</span></td>
+            <td class="p-3"><span class="flex items-center gap-3"><span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-extrabold" :class="moneda.simbolo==='BTC'?'bg-amber-100 text-amber-800':moneda.simbolo==='ETH'?'bg-indigo-100 text-indigo-800':moneda.simbolo==='SOL'?'bg-violet-100 text-violet-800':moneda.simbolo==='XRP'?'bg-sky-100 text-sky-800':moneda.simbolo==='USDT'?'bg-emerald-100 text-emerald-800':'bg-slate-100 text-slate-700'">{{moneda.simbolo.slice(0,2)}}</span><span class="min-w-0"><strong class="block text-slate-900">{{ moneda.nombre }}</strong><span class="text-xs text-slate-500">{{ moneda.simbolo }}</span></span></span></td>
             <td class="p-3 text-right tabular-nums">{{ formatoUsd(precioVivo(moneda)?.precio ?? moneda.precioUsd) }}</td>
-            <td class="p-3 text-right tabular-nums" :class="(precioVivo(moneda)?.cambio24h ?? moneda.cambio24h) === null ? 'text-slate-500' : (precioVivo(moneda)?.cambio24h ?? moneda.cambio24h)! >= 0 ? 'text-green-600' : 'text-red-600'">{{ (precioVivo(moneda)?.cambio24h ?? moneda.cambio24h) === null ? '—' : `${((precioVivo(moneda)?.cambio24h ?? moneda.cambio24h) as number).toFixed(2)}%` }}</td>
+            <td class="p-3 text-right tabular-nums"><span class="inline-flex min-w-[84px] justify-end rounded-lg px-2 py-1.5 font-bold" :class="(precioVivo(moneda)?.cambio24h ?? moneda.cambio24h) === null ? 'bg-slate-50 text-slate-500' : (precioVivo(moneda)?.cambio24h ?? moneda.cambio24h)! >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'">{{ (precioVivo(moneda)?.cambio24h ?? moneda.cambio24h) === null ? '—' : `${((precioVivo(moneda)?.cambio24h ?? moneda.cambio24h) as number)>=0?'+':''}${((precioVivo(moneda)?.cambio24h ?? moneda.cambio24h) as number).toFixed(2)}%` }}</span></td>
             <td class="p-3 text-right tabular-nums">{{ formatoUsd(moneda.capitalizacionUsd) }}</td>
           </tr></tbody>
         </table>
         <p v-if="!cargando && resultado.length === 0" class="p-6 text-center text-sm text-slate-500">{{ error ? 'Sin precios disponibles' : 'Sin resultados en esta página' }}</p>
       </div>
-      <div class="mt-4 flex justify-end gap-2">
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4"><span class="text-xs text-slate-500">Página {{pagina}} · {{resultado.length}} activos en esta vista</span><div class="flex gap-2">
         <button :disabled="pagina === 1 || cargando" class="rounded-lg border px-3 py-2 text-sm disabled:opacity-40" @click="navegar(-1)">Anterior</button>
-        <button :disabled="pagina === 10 || cargando || lista.length < 50" class="rounded-lg border px-3 py-2 text-sm disabled:opacity-40" @click="navegar(1)">Siguiente</button>
+        <button :disabled="pagina === 10 || cargando || lista.length < 50" class="rounded-lg border px-3 py-2 text-sm disabled:opacity-40" @click="navegar(1)">Siguiente</button></div>
       </div>
     </section>
     <p class="text-xs text-slate-500">Referencia de mercado, no ejecución ni recomendación de inversión. Precio agregado sujeto a actualización y disponibilidad del proveedor.</p>

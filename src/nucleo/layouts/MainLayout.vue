@@ -17,7 +17,7 @@ function alternar() { compacto.value = !compacto.value; try { localStorage.setIt
     <button type="button" class="fixed top-[18px] z-50 hidden h-9 w-9 items-center justify-center rounded-xl border border-emerald-100 bg-white text-emerald-700 shadow-md transition-all hover:bg-emerald-50 lg:flex" :class="compacto?'left-[57px]':'left-[231px]'" :aria-label="compacto?'Expandir menú lateral':'Contraer menú lateral'" :title="compacto?'Expandir menú':'Contraer menú'" @click="alternar">{{compacto?'»':'«'}}</button>
     <div class="min-h-screen min-w-0 transition-[padding] duration-200" :class="compacto?'lg:pl-[76px]':'lg:pl-[248px]'">
       <Encabezado :titulo="titulo" @abrir-menu="menuAbierto = true" />
-      <main class="mx-auto w-full min-w-0 max-w-[1700px] p-3 sm:p-5 lg:p-6 xl:p-8"><RouterView /></main>
+      <main class="mx-auto w-full min-w-0 max-w-[1700px] p-3 sm:p-4 lg:p-5 xl:p-6"><RouterView /></main>
     </div>
   </div>
 </template>
