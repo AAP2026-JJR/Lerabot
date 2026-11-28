@@ -37,7 +37,7 @@ router.beforeEach((to) => {
   if (!sesion) return '/login'
   // Guardia visual: NO sustituye autorización en API Gateway/Lambdas.
   if (['/configuracion', '/auditoria'].includes(to.path) && sesion.rol !== 'ADMIN') return '/dashboard'
-  if (to.path === '/mi-perfil' && sesion.rol !== 'SUBSCRIBER') return '/dashboard'
+  if (['/mi-perfil', '/billetera'].includes(to.path) && sesion.rol !== 'SUBSCRIBER') return '/dashboard'
   return true
 })
 

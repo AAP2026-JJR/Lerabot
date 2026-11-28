@@ -117,6 +117,52 @@ export const handler=async(event={})=>{
    }));
    return reply(200,{ok:true,updatedAt:now,message:'Preferencias guardadas para entorno demo'},event);
   }
+  if(action==='updateAccountStrategies'){
+   // Solo laboratorio /dev. No habilitar contra un endpoint público /prd.
+   const stage=str(event.requestContext?.stage||event.requestContext?.http?.stage||'').toLowerCase();
+   if(stage!=='dev'||process.env.LERABOT_DEV_PROFILE_WRITES!=='enabled'||process.env.LERABOT_DEV_TRADING_CONFIG_WRITES!=='enabled')
+    return reply(403,{ok:false,error:'Edición granular disponible únicamente en API Gateway /dev con flags de laboratorio'},event);
+   if(!p||!str(p.PK).startsWith('SUB#')||p.role!=='SUBSCRIBER'||p.status!=='active'||p.subscriberId!==str(b.subscriberId))
+    return reply(403,{ok:false,error:'Perfil no disponible'},event);
+   if(!str(b.expectedUpdatedAt)||str(b.expectedUpdatedAt)!==str(p.updatedAt))
+    return reply(409,{ok:false,error:'El perfil cambió en AWS. Recarga antes de guardar'},event);
+   const edits=b.edits,marketFlags=b.markets;
+   const styleSet=new Set(['POSITION','SCALP','SWING','INTRADAY','MACRO']);
+   if(!Array.isArray(edits)||edits.length>100||!own(marketFlags)||typeof marketFlags.spot!=='boolean'||typeof marketFlags.futures!=='boolean')
+    return reply(400,{ok:false,error:'Datos de edición inválidos'},event);
+   const old=own(p.tradingPreferences)?p.tradingPreferences:{};
+   const updated=structuredClone(old);
+   const seen=new Set();
+   for(const m of ['spot','futures']){
+    if(!own(updated[m])||!own(updated[m].symbols))return reply(409,{ok:false,error:'Configuración incompatible con la edición granular'},event);
+    updated[m].enabled=marketFlags[m];
+   }
+   // Aplicar las modificaciones solo al accountId elegido, sin alterar otras cuentas.
+   for(const e of edits){
+    if(!own(e)||!['spot','futures'].includes(e.market)||typeof e.symbol!=='string'||!/^[A-Z0-9]{2,20}(USDT|USDC)$/.test(e.symbol)||typeof e.account!=='string'||e.account.length>120||!Number.isInteger(e.index)||e.index<0||!styleSet.has(e.style)||!risks.has(e.profile)||typeof e.enabled!=='boolean')
+     return reply(400,{ok:false,error:'Edición de regla inválida'},event);
+    const k=`${e.market}|${e.symbol}|${e.account}|${e.index}`;
+    if(seen.has(k))return reply(400,{ok:false,error:'Regla repetida'},event);seen.add(k);
+    const original=updated[e.market].symbols[e.symbol];
+    if(!Array.isArray(original)||!own(original[e.index]))return reply(409,{ok:false,error:'Regla no disponible para edición'},event);
+    const rule=original[e.index];
+    if(!Array.isArray(rule.accounts)||!rule.accounts.includes(e.account))return reply(403,{ok:false,error:'La cuenta no pertenece a esta regla'},event);
+    const next={...rule,accounts:[e.account],style:e.style,profile:e.profile,enabled:e.enabled};
+    if(rule.accounts.length===1){original[e.index]=next;}
+    else {
+     rule.accounts=rule.accounts.filter(a=>a!==e.account);
+     original.push(next);
+    }
+   }
+   if(JSON.stringify(updated).length>250000)return reply(400,{ok:false,error:'Configuración demasiado grande'},event);
+   const now=new Date().toISOString();
+   await db.send(new UpdateCommand({TableName:table,Key:{PK:p.PK,SK:'PROFILE'},
+    UpdateExpression:'SET tradingPreferences=:config, updatedAt=:now',
+    ConditionExpression:'attribute_exists(PK) AND subscriberId=:id AND #role=:role AND #status=:active AND updatedAt=:previous',
+    ExpressionAttributeNames:{'#role':'role','#status':'status'},
+    ExpressionAttributeValues:{':config':updated,':now':now,':id':p.subscriberId,':role':'SUBSCRIBER',':active':'active',':previous':b.expectedUpdatedAt}}));
+   return reply(200,{ok:true,updatedAt:now,message:'Configuración granular guardada en laboratorio'},event);
+  }
   if(action==='updateRisk'){
    // Intencionalmente NO asegura identidad: modo demo, desactivado salvo opt-in AWS.
    if(process.env.LERABOT_DEV_PROFILE_WRITES!=='enabled')return reply(403,{ok:false,error:'Edicion demo desactivada en AWS'},event);

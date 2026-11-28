@@ -83,8 +83,8 @@ const confirmado = (e: EventoAuditoria) => {
     ['BUY_CONFIRMED','SELL_CONFIRMED','FILLED','ORDER_FILLED','SPOT_BUY_EXECUTED','SPOT_SELL_EXECUTED'].includes(accion) ||
     ['BUY_CONFIRMED','SELL_CONFIRMED','FILLED'].includes(est)
 }
-const omitida = (e: EventoAuditoria) => valor(e.action).toUpperCase().startsWith('SKIPPED_') || valor(e.status).toUpperCase().startsWith('SKIPPED_')
-const fallo = (e: EventoAuditoria) => /REJECT|FAIL|ERROR/.test(valor(e.status).toUpperCase()) || /REJECT|FAIL|ERROR/.test(valor(e.action).toUpperCase())
+const omitida = (e: EventoAuditoria) => /^(SKIPPED_|NOOP_)/.test(valor(e.action).toUpperCase()) || /^(SKIPPED_|NOOP_)/.test(valor(e.status).toUpperCase())
+const fallo = (e: EventoAuditoria) => /REJECT|FAIL|ERROR|UNSUPPORTED_EXCHANGE/.test(valor(e.status).toUpperCase()) || /REJECT|FAIL|ERROR|UNSUPPORTED_EXCHANGE/.test(valor(e.action).toUpperCase())
 const razon = (e: EventoAuditoria) => valor(e.reasonCode) || valor(e.errorMessage) || valor(e.message) || valor(e.stage)
 const identificador = (e: EventoAuditoria) => valor(e.operationId) || valor(e.signalId) || (valor(e.PK).startsWith('OP#') ? valor(e.PK).slice(3) : valor(e.PK))
 const listaGrupos = computed<GrupoOperacion[]>(() => {
@@ -117,6 +117,7 @@ const listaGrupos = computed<GrupoOperacion[]>(() => {
       const s = valor(principal.status).toUpperCase()
       if (/REJECT/.test(s)) resultado = 'RECHAZADA'
       else if (/FAIL|ERROR/.test(s)) resultado = 'FALLIDA'
+      else if (s === 'NO_EXECUTIONS') resultado = 'OMITIDA'
       else if (/ROUTED|PASS_RULES/.test(s)) resultado = 'ENRUTADA'
       else if (confirmado(principal)) resultado = 'EJECUTADA'
       else if (omitida(principal)) resultado = 'OMITIDA'
@@ -163,16 +164,39 @@ const barras = computed(() => [
 ])
 const percent = (n:number) => resumen.value.total ? Math.round(n*100/resumen.value.total) : 0
 const claseEstado = (r: string) => {
-  if (r==='FALLIDA' || r==='RECHAZADA') return 'bg-red-50 text-red-700'
-  if (r==='EJECUTADA') return 'bg-emerald-50 text-emerald-700'
-  if (r==='ENRUTADA') return 'bg-amber-50 text-amber-700'
-  if (r==='PARCIAL') return 'bg-blue-50 text-blue-700'
+  if (r==='FALLIDA') return 'bg-red-50 text-red-700 border border-red-200'
+  if (r==='RECHAZADA') return 'bg-rose-50 text-rose-700 border border-rose-200'
+  if (r==='EJECUTADA') return 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+  if (r==='EXITO_TECNICO') return 'bg-teal-50 text-teal-700 border border-teal-200'
+  if (r==='OMITIDA') return 'bg-slate-100 text-slate-700 border border-slate-200'
+  if (r==='ENRUTADA') return 'bg-amber-50 text-amber-700 border border-amber-200'
+  if (r==='PARCIAL') return 'bg-blue-50 text-blue-700 border border-blue-200'
   return 'bg-slate-100 text-slate-600'
 }
 const nombreEstado = (r: string) => ({FALLIDA:'Fallida',RECHAZADA:'Rechazada',EJECUTADA:'Ejecutada',ENRUTADA:'Enrutada',PARCIAL:'Parcial',OMITIDA:'Omitida',EXITO_TECNICO:'Éxito técnico',OTROS:'Otros'} as Record<string,string>)[r] || r
+// F19.5: etiquetas funcionales para códigos crudos; nunca se alteran status/action originales.
+const diagnosticoLegible = (g: GrupoOperacion) => {
+  const codigo = valor(g.rutas.find(fallo)?.reasonCode) || valor(g.principal.reasonCode) ||
+    valor(g.rutas.find(omitida)?.action) || valor(g.principal.status)
+  const mapa: Record<string,string> = {
+    TIMEFRAME_NOT_ENABLED:'Temporalidad no habilitada',
+    SIGNAL_QUALITY_TOO_LOW:'Calidad de señal insuficiente',
+    MIN_NOTIONAL_NOT_MET:'Importe menor al mínimo',
+    UNSUPPORTED_EXCHANGE:'Exchange no compatible',
+    SKIPPED_STALE_TP1_PROTECTION:'Protección TP1 obsoleta, omitida',
+    SKIPPED_ENTRY_INVALIDATE_NO_MATCH:'Invalidación sin entrada asociada',
+    NOOP_SAME_SIDE:'Sin cambios: misma dirección',
+    NO_EXECUTIONS:'Sin cuentas elegibles para ejecutar',
+    ROUTED:'Enviada al ejecutor; sin confirmación',
+    COMPLETED:'Proceso completado (no confirma orden)',
+    SUCCESS:'Procesamiento correcto; verificar ruta'
+  }
+  return mapa[codigo.toUpperCase()] || (codigo ? codigo.replace(/_/g,' ').toLowerCase() : (g.motivo || 'Sin diagnóstico registrado'))
+}
+const estadosRaw = computed(() => [...new Set(enFechaOperaciones.value.flatMap(g => g.registros.map(e => valor(e.status).toUpperCase())).filter(Boolean))].sort())
 const rutaNombre = (e: EventoAuditoria) => valor(e.subscriberId) || (valor(e.SK).split('#')[1] || 'Sin suscriptor')
 const rutaExchange = (e: EventoAuditoria) => valor(e.exchangeId) || (valor(e.SK).split('#')[2] || 'Sin exchange')
-const rutaEstado = (e: EventoAuditoria) => fallo(e)?'Fallida':confirmado(e)?'Ejecutada':omitida(e)?'Omitida':valor(e.status) || 'Pendiente'
+const rutaEstado = (e: EventoAuditoria) => fallo(e)?'Rechazada / fallida':confirmado(e)?'Ejecutada':omitida(e)?'Omitida (sin orden)':(['SUCCESS','COMPLETED'].includes(valor(e.status).toUpperCase())?'Éxito técnico (sin orden confirmada)':valor(e.status) || 'Pendiente')
 const grupoAbierto = ref<GrupoOperacion | null>(null)
 const pestaña = ref<'resumen'|'suscriptores'|'json'>('resumen')
 const rutaAbierta = ref('')
@@ -200,7 +224,10 @@ const diagnosticoCabecera = computed(() => {
   const normal = codigo.toUpperCase()
   let titulo = 'Resultado de la operación'
   let explicacion = 'Revisa el resultado individual de cada ruta para conocer el desenlace.'
-  if (normal.includes('MIN_NOTIONAL_NOT_MET')) {
+  if (normal.includes('UNSUPPORTED_EXCHANGE')) {
+    titulo = 'Exchange no compatible con esta operación'
+    explicacion = 'La ruta no encontró un controlador compatible con el exchange o mercado indicado. Comprueba cuenta, mercado e integración.'
+  } else if (normal.includes('MIN_NOTIONAL_NOT_MET')) {
     titulo = 'Importe de la orden inferior al mínimo'
     explicacion = 'El validador de riesgo rechazó la orden porque el valor calculado de la posición no alcanzó el mínimo permitido. Revisa cantidad, precio y configuración del suscriptor.'
   } else if (normal.includes('TIMEFRAME_NOT_ENABLED')) {
@@ -209,7 +236,7 @@ const diagnosticoCabecera = computed(() => {
   } else if (normal.includes('SIGNAL_QUALITY_TOO_LOW') || normal.includes('QUALITY_TOO_LOW')) {
     titulo = 'Calidad de señal insuficiente'
     explicacion = 'La señal quedó por debajo del umbral mínimo de calidad configurado; no debe considerarse una orden ejecutada.'
-  } else if (normal.includes('SKIPPED_')) {
+  } else if (normal.includes('SKIPPED_') || normal.includes('NOOP_')) {
     titulo = 'Ejecución omitida por una regla'
     explicacion = 'La ruta fue omitida de forma controlada; no existe evidencia de una orden nueva completada.'
   } else if (g.resultado === 'FALLIDA' || g.resultado === 'RECHAZADA') {
@@ -224,6 +251,9 @@ const diagnosticoCabecera = computed(() => {
   } else if (g.resultado === 'EJECUTADA') {
     titulo = 'Acción de ejecución registrada'
     explicacion = 'Existen acciones de ejecución confirmada en las rutas. Revisa los identificadores y respuestas del exchange.'
+  } else if (normal === 'NO_EXECUTIONS') {
+    titulo = 'Sin ejecución elegible'
+    explicacion = 'La señal terminó sin cuentas o rutas elegibles para ejecutar una orden.'
   } else if (g.resultado === 'OMITIDA') {
     titulo = 'Operación omitida sin nueva orden'
     explicacion = 'Las rutas terminaron omitiendo la orden de forma controlada.'
@@ -304,7 +334,7 @@ onUnmounted(() => { activo=false;if(temporizador)clearInterval(temporizador);win
         </div>
       </div>
       <span class="text-xs text-slate-500">{{ periodo==='hoy' ? 'Hoy · Perú · actualización cada 30 s' : 'Filtro sobre eventos consultados' }}</span>
-      <span class="ml-auto text-xs text-slate-500">{{visibles.length}} operaciones visibles · {{eventos.length}} registros DynamoDB</span>
+      <span class="ml-auto text-xs text-slate-500">{{visibles.length}} operaciones visibles · {{eventos.length}} registros DynamoDB · {{estadosRaw.length}} estados originales</span>
     </div>
     <div class="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
       <article class="audit-kpi"><span class="audit-kpi-label">Operaciones</span><strong>{{resumen.total}}</strong><span>Señales únicas</span></article>
@@ -319,7 +349,7 @@ onUnmounted(() => { activo=false;if(temporizador)clearInterval(temporizador);win
     <div class="audit-panel p-3"><div class="mb-3 flex items-center justify-between"><h3 class="font-bold">Distribución por resultado de operación</h3><span class="text-xs text-slate-500">{{resumen.total}} operaciones</span></div><div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><div v-for="b in barras" :key="b.label"><div class="flex justify-between text-xs"><span>{{b.label}}</span><strong>{{b.n}} · {{percent(b.n)}}%</strong></div><div class="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full" :style="{width:percent(b.n)+'%',background:b.color}"></div></div></div></div></div>
     <div class="audit-panel p-3"><div class="mb-3 flex flex-wrap items-center justify-between gap-2"><h3 class="font-bold">Filtros de operaciones</h3><div class="flex gap-2"><button class="audit-secondary" @click="limpiar">Limpiar filtros</button><button class="audit-secondary" :disabled="!visibles.length" @click="exportar">↓ CSV</button></div></div><div class="grid grid-cols-2 gap-3 lg:grid-cols-4"><label class="audit-label">Estado<select v-model="estado" class="audit-input"><option value="">Todos</option><option value="EJECUTADA">Ejecutada</option><option value="ENRUTADA">Enrutada</option><option value="RECHAZADA">Rechazada</option><option value="FALLIDA">Fallida</option><option value="PARCIAL">Parcial</option><option value="OMITIDA">Omitida</option><option value="EXITO_TECNICO">Éxito técnico</option><option value="OTROS">Otros</option></select></label><label class="audit-label">Fuente<select v-model="fuente" class="audit-input"><option value="">Todas</option><option v-for="f in fuentes" :key="f">{{f}}</option></select></label><label class="audit-label">Símbolo<select v-model="simbolo" class="audit-input"><option value="">Todos</option><option v-for="s in simbolos" :key="s">{{s}}</option></select></label><label class="audit-label">Mercado<select v-model="mercado" class="audit-input"><option value="">Spot / Futures</option><option v-for="m in mercados" :key="m">{{m}}</option></select></label></div></div>
     <div class="audit-panel overflow-hidden"><div class="flex flex-wrap items-center justify-between gap-2 p-4"><div><h3 class="font-bold">Operaciones del sistema</h3><p class="text-xs text-slate-500">Una fila por operación · más reciente primero · 25 por página</p></div><span class="text-xs text-slate-500">Página {{pagina}} / {{totalPaginas}}</span></div>
-      <div class="max-h-[560px] overflow-auto"><table class="min-w-[960px] w-full text-left text-xs"><thead class="sticky top-0 z-10 bg-[#eff6f4] text-slate-600"><tr><th>Fecha (Perú)</th><th>Resultado</th><th>Símbolo / Acción</th><th>Mercado</th><th>Suscriptores</th><th>Diagnóstico</th><th></th></tr></thead><tbody><tr v-for="g in paginaEventos" :key="g.id" class="cursor-pointer border-t border-slate-100 hover:bg-emerald-50/50" @click="abrir(g)"><td class="whitespace-nowrap">{{fechaTexto(g.fecha)}}</td><td><span class="rounded-md px-2 py-1 font-semibold" :class="claseEstado(g.resultado)">{{nombreEstado(g.resultado)}}</span></td><td class="font-semibold">{{g.principal.symbol || '—'}}<span class="block font-normal text-slate-500">{{g.principal.side || g.principal.eventType || '—'}}</span></td><td>{{g.principal.tradeType || '—'}}</td><td>{{g.rutas.length}} / {{g.esperadas}}<span class="block text-slate-500">rutas registradas / esperadas</span></td><td class="max-w-[280px] truncate" :title="g.motivo">{{g.motivo || 'Sin detalle de motivo'}}</td><td class="font-semibold text-emerald-700">Ver ↗</td></tr><tr v-if="!paginaEventos.length"><td colspan="7" class="py-10 text-center text-slate-500">{{cargando?'Consultando…':'No hay operaciones para estos filtros'}}</td></tr></tbody></table></div>
+      <div class="max-h-[560px] overflow-auto"><table class="min-w-[960px] w-full text-left text-xs"><thead class="sticky top-0 z-10 bg-[#eff6f4] text-slate-600"><tr><th>Fecha (Perú)</th><th>Resultado</th><th>Símbolo / Acción</th><th>Mercado</th><th>Suscriptores</th><th>Diagnóstico</th><th></th></tr></thead><tbody><tr v-for="g in paginaEventos" :key="g.id" class="cursor-pointer border-t border-slate-100 hover:bg-emerald-50/50" @click="abrir(g)"><td class="whitespace-nowrap">{{fechaTexto(g.fecha)}}</td><td><span class="rounded-md px-2 py-1 font-semibold" :class="claseEstado(g.resultado)">{{nombreEstado(g.resultado)}}</span></td><td class="font-semibold">{{g.principal.symbol || '—'}}<span class="block font-normal text-slate-500">{{g.principal.side || g.principal.eventType || '—'}}</span></td><td>{{g.principal.tradeType || '—'}}</td><td>{{g.rutas.length}} / {{g.esperadas}}<span class="block text-slate-500">rutas registradas / esperadas</span></td><td class="max-w-[280px] truncate" :title="g.motivo || diagnosticoLegible(g)">{{diagnosticoLegible(g)}}</td><td class="font-semibold text-emerald-700">Ver ↗</td></tr><tr v-if="!paginaEventos.length"><td colspan="7" class="py-10 text-center text-slate-500">{{cargando?'Consultando…':'No hay operaciones para estos filtros'}}</td></tr></tbody></table></div>
       <footer class="flex items-center justify-between gap-3 border-t border-slate-100 p-3"><span class="text-xs text-slate-500">CSV: una fila por operación (sin eliminar logs)</span><div class="flex gap-2"><button class="audit-secondary" :disabled="pagina<=1" @click="pagina--">Anterior</button><button class="audit-secondary" :disabled="pagina>=totalPaginas" @click="pagina++">Siguiente</button></div></footer>
     </div>
     <div v-if="grupoAbierto" class="audit-backdrop" @click.self="grupoAbierto=null">
@@ -344,8 +374,8 @@ onUnmounted(() => { activo=false;if(temporizador)clearInterval(temporizador);win
             <p v-if="!grupoAbierto.completas" class="mt-2 text-xs font-semibold text-amber-700">Rutas encontradas: {{grupoAbierto.rutas.length}} de {{grupoAbierto.esperadas}} esperadas. Resultado aún no completo.</p>
           </div>
           <div class="mb-3 flex rounded-xl bg-slate-100 p-1 text-xs font-semibold"><button class="audit-pill" :class="pestaña==='resumen'?'audit-pill-active':''" @click="pestaña='resumen'">Resumen</button><button class="audit-pill" :class="pestaña==='suscriptores'?'audit-pill-active':''" @click="pestaña='suscriptores'">Suscriptores ({{grupoAbierto.rutas.length}})</button><button class="audit-pill" :class="pestaña==='json'?'audit-pill-active':''" @click="pestaña='json'">JSON</button></div>
-          <div v-if="pestaña==='resumen'" class="space-y-3"><div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3"><div class="audit-info"><span>Fecha</span><strong>{{fechaTexto(grupoAbierto.fecha)}}</strong></div><div class="audit-info"><span>Mercado</span><strong>{{grupoAbierto.principal.tradeType||'—'}}</strong></div><div class="audit-info"><span>Fuente</span><strong>{{grupoAbierto.principal.source||'—'}}</strong></div><div class="audit-info"><span>Trades informados</span><strong>{{grupoAbierto.principal.tradesCount??'—'}}</strong></div><div class="audit-info"><span>Estado META</span><strong>{{grupoAbierto.principal.status||'—'}}</strong></div><div class="audit-info"><span>Resultado rutas</span><strong>{{grupoAbierto.rutas.filter(fallo).length}} fallidas · {{grupoAbierto.rutas.filter(omitida).length}} omitidas</strong></div></div><div><h4 class="mb-2 text-sm font-bold">Secuencia de la operación</h4><ol class="space-y-2"><li v-for="(e,i) in [...grupoAbierto.registros].sort((a,b)=>ordenFecha(a)-ordenFecha(b))" :key="e.PK+'|'+e.SK" class="flex gap-3 border-l-2 border-emerald-100 pl-3 text-xs"><span class="font-bold text-slate-400">{{i+1}}</span><div><strong>{{fechaTexto(e.createdAt)}} · {{esMeta(e)?'Señal principal':esRuta(e)?rutaNombre(e)+' · '+rutaExchange(e):'Evento'}}</strong><p class="mt-1 text-slate-500">{{e.action||e.status}} · {{razon(e)||'Sin mensaje'}}</p></div></li></ol></div><p class="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">El campo <code>executed=true</code> en META no confirma que el exchange haya llenado la orden. Se necesita evidencia explícita en la ruta.</p><button class="audit-secondary w-full" @click="pestaña='suscriptores'">Ver resultados por suscriptor →</button></div>
-          <div v-else-if="pestaña==='suscriptores'" class="space-y-2"><p v-if="!grupoAbierto.rutas.length" class="text-sm text-slate-500">No hay rutas individuales en los registros consultados.</p><div v-for="r in grupoAbierto.rutas" :key="r.SK" class="rounded-xl border border-slate-200"><button class="flex w-full items-center justify-between gap-2 p-3 text-left" @click="rutaAbierta=rutaAbierta===r.SK?'':r.SK"><span class="text-sm font-bold">{{rutaNombre(r)}} · {{rutaExchange(r)}}</span><span class="rounded-md px-2 py-1 text-xs font-semibold" :class="claseEstado(fallo(r)?'FALLIDA':confirmado(r)?'EJECUTADA':omitida(r)?'OMITIDA':'OTROS')">{{rutaEstado(r)}} {{rutaAbierta===r.SK?'⌃':'⌄'}}</span></button><div v-if="rutaAbierta===r.SK" class="space-y-2 border-t border-slate-100 p-3 text-xs"><p><strong>Fecha:</strong> {{fechaTexto(r.createdAt)}}</p><p><strong>Acción:</strong> {{r.action||'No informada'}}</p><p><strong>Etapa:</strong> {{r.stage||'No informada'}}</p><p><strong>Código:</strong> {{r.reasonCode||'No informado'}}</p><p class="break-words"><strong>Respuesta:</strong> {{r.errorMessage||r.message||'Sin detalle'}}</p><p class="text-slate-500">{{confirmado(r)?'Existe una acción explícita de ejecución en el registro.': 'No hay una confirmación explícita de orden completada.'}}</p><button class="audit-secondary" @click="jsonElegido=r.SK;pestaña='json'">Ver JSON de {{rutaNombre(r)}} →</button></div></div></div>
+          <div v-if="pestaña==='resumen'" class="space-y-3"><div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3"><div class="audit-info"><span>Fecha</span><strong>{{fechaTexto(grupoAbierto.fecha)}}</strong></div><div class="audit-info"><span>Mercado</span><strong>{{grupoAbierto.principal.tradeType||'—'}}</strong></div><div class="audit-info"><span>Fuente</span><strong>{{grupoAbierto.principal.source||'—'}}</strong></div><div class="audit-info"><span>Trades informados</span><strong>{{grupoAbierto.principal.tradesCount??'—'}}</strong></div><div class="audit-info"><span>Estado DynamoDB (META)</span><strong>{{grupoAbierto.principal.status||'—'}}</strong></div><div class="audit-info"><span>Resultado rutas</span><strong>{{grupoAbierto.rutas.filter(fallo).length}} fallidas · {{grupoAbierto.rutas.filter(omitida).length}} omitidas</strong></div></div><div><h4 class="mb-2 text-sm font-bold">Secuencia de la operación</h4><ol class="space-y-2"><li v-for="(e,i) in [...grupoAbierto.registros].sort((a,b)=>ordenFecha(a)-ordenFecha(b))" :key="e.PK+'|'+e.SK" class="flex gap-3 border-l-2 border-emerald-100 pl-3 text-xs"><span class="font-bold text-slate-400">{{i+1}}</span><div><strong>{{fechaTexto(e.createdAt)}} · {{esMeta(e)?'Señal principal':esRuta(e)?rutaNombre(e)+' · '+rutaExchange(e):'Evento'}}</strong><p class="mt-1 text-slate-500">{{e.action||e.status}} · {{razon(e)||'Sin mensaje'}}</p></div></li></ol></div><p class="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">El campo <code>executed=true</code> en META no confirma que el exchange haya llenado la orden. Se necesita evidencia explícita en la ruta.</p><button class="audit-secondary w-full" @click="pestaña='suscriptores'">Ver resultados por suscriptor →</button></div>
+          <div v-else-if="pestaña==='suscriptores'" class="space-y-2"><p v-if="!grupoAbierto.rutas.length" class="text-sm text-slate-500">No hay rutas individuales en los registros consultados.</p><div v-for="r in grupoAbierto.rutas" :key="r.SK" class="rounded-xl border border-slate-200"><button class="flex w-full items-center justify-between gap-2 p-3 text-left" @click="rutaAbierta=rutaAbierta===r.SK?'':r.SK"><span class="text-sm font-bold">{{rutaNombre(r)}} · {{rutaExchange(r)}}</span><span class="rounded-md px-2 py-1 text-xs font-semibold" :class="claseEstado(fallo(r)?'FALLIDA':confirmado(r)?'EJECUTADA':omitida(r)?'OMITIDA':['SUCCESS','COMPLETED'].includes(valor(r.status).toUpperCase())?'EXITO_TECNICO':'OTROS')">{{rutaEstado(r)}} {{rutaAbierta===r.SK?'⌃':'⌄'}}</span></button><div v-if="rutaAbierta===r.SK" class="space-y-2 border-t border-slate-100 p-3 text-xs"><p><strong>Fecha:</strong> {{fechaTexto(r.createdAt)}}</p><p><strong>Acción:</strong> {{r.action||'No informada'}}</p><p><strong>Etapa:</strong> {{r.stage||'No informada'}}</p><p><strong>Código:</strong> {{r.reasonCode||'No informado'}}</p><p class="break-words"><strong>Respuesta:</strong> {{r.errorMessage||r.message||'Sin detalle'}}</p><p class="text-slate-500">{{confirmado(r)?'Existe una acción explícita de ejecución en el registro.': 'No hay una confirmación explícita de orden completada.'}}</p><button class="audit-secondary" @click="jsonElegido=r.SK;pestaña='json'">Ver JSON de {{rutaNombre(r)}} →</button></div></div></div>
           <div v-else class="space-y-2"><div class="flex flex-wrap items-center justify-between gap-2"><label class="text-xs font-semibold">Registro <select v-model="jsonElegido" class="audit-input mt-1"><option value="META">Principal (META / legado)</option><option v-for="r in grupoAbierto.rutas" :key="r.SK" :value="r.SK">{{rutaNombre(r)}} · {{rutaExchange(r)}}</option></select></label><button class="audit-secondary" @click="copiarJSON">Copiar JSON</button></div><pre class="audit-json">{{detalleJson}}</pre><p class="text-xs text-slate-500">JSON del registro recibido desde la API; no se consulta otra vez al cambiar de pestaña.</p></div>
         </div>
       </section>

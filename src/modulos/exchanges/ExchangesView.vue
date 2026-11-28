@@ -1,106 +1,96 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { listarOperaciones } from '../operaciones/servicio'
+import { computed, onMounted, ref, watch } from 'vue'
+import { listarOperaciones, preciosDeMercado, detalleOperacion } from '../operaciones/servicio'
+import { cotizacionActual, observarCotizaciones, cotizacionesVivas } from '../mercado/cotizacionesVivas'
+import { onUnmounted } from 'vue'
 import type { OperacionSpot } from '../operaciones/tipos'
-import OperacionesView from '../operaciones/OperacionesView.vue'
 import { sesionDemo } from '../login/sesionDemo'
-
-// Resumen historico desde registros: NO es balance disponible ni posiciones abiertas.
-const sesion = sesionDemo()
-const esAdmin = sesion?.rol === 'ADMIN'
-const idPropio = sesion?.rol === 'SUBSCRIBER' ? sesion.subscriberId || '' : ''
-const filas = ref<OperacionSpot[]>([])
-const selector = ref('')
-const cargando = ref(false)
-const error = ref('')
-const parcial = ref(false)
-const configurando = ref('')
-const apiKey = ref('')
-const secretKey = ref('')
-const mostrarSecreto = ref(false)
-const avisoDemo = ref('')
-const tab = ref<'resumen' | 'operaciones'>('resumen')
-const moneda = (n: number) => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:2}).format(n)
-const sub = (o: OperacionSpot) => /^SUB#([^#]+)/.exec(o.PK)?.[1] || ''
-const exchange = (o: OperacionSpot) => String(o.exchangeId || '').trim().toLowerCase()
-const usuarios = computed(() => Array.from(new Set(filas.value.map(sub).filter(Boolean))).sort())
-const mias = computed(() => filas.value.filter(o => (!idPropio || sub(o).toLowerCase() === idPropio.toLowerCase()) && (!esAdmin || !selector.value || sub(o) === selector.value)))
-const resumen = computed(() => {
-  const mapa = new Map<string, {nombre:string,ordenes:number,simbolos:Set<string>,comprasUsd:number,ventasUsd:number}>()
-  for (const o of mias.value) {
-    const clave = exchange(o)
-    if (!clave) continue
-    if (!mapa.has(clave)) mapa.set(clave,{nombre:clave,ordenes:0,simbolos:new Set(),comprasUsd:0,ventasUsd:0})
-    const r = mapa.get(clave)!
-    r.ordenes++
-    if (o.symbol) r.simbolos.add(String(o.symbol).toUpperCase())
-    const precio = Number(o.buyPrice), cantidad = Number(o.quantity)
-    if (Number.isFinite(precio) && precio>0 && Number.isFinite(cantidad) && cantidad>0) {
-      if (String(o.side).toUpperCase()==='BUY') r.comprasUsd += precio*cantidad
-      if (String(o.side).toUpperCase()==='SELL') r.ventasUsd += precio*cantidad // Puede ser precio de entrada, no ejecucion
-    }
-  }
-  return [...mapa.values()].sort((a,b)=>b.ordenes-a.ordenes)
-})
-const totalCompras = computed(()=>resumen.value.reduce((a,x)=>a+x.comprasUsd,0))
-async function cargar() {
-  cargando.value=true;error.value='';parcial.value=false
-  try {
-    let cursor = '';const todos:OperacionSpot[]=[]
-    // Limite defensivo: evita scans ilimitados. Indicar siempre truncamiento.
-    for(let i=0;i<10;i++) {
-      const r = await listarOperaciones({limite:'100', ...(cursor?{cursor}:{})})
-      todos.push(...(r.operaciones||[]))
-      if(r.parcial) parcial.value=true
-      if(!r.siguienteCursor) {cursor='';break}
-      cursor=r.siguienteCursor
-    }
-    if(cursor) parcial.value=true
-    filas.value=todos
-  } catch(e) {error.value=e instanceof Error?e.message:'No fue posible consultar las operaciones';filas.value=[]}
-  finally {cargando.value=false}
-}
-function abrir(nombre:string) { configurando.value=nombre;apiKey.value='';secretKey.value='';avisoDemo.value='';mostrarSecreto.value=false }
-function cerrar() {configurando.value='';apiKey.value='';secretKey.value='';mostrarSecreto.value=false}
-function revisar() {avisoDemo.value='Formulario de demostracion validado. Las claves NO se guardaron ni enviaron. Para una conexion real se requiere almacenamiento cifrado en backend, autenticacion y permisos de solo lectura.';apiKey.value='';secretKey.value=''}
-onMounted(()=>{void cargar()})
+const sesion=sesionDemo()
+const esAdmin=sesion?.rol==='ADMIN'
+const propietario=sesion?.rol==='SUBSCRIBER'?String(sesion.subscriberId||'').toLowerCase():''
+const rows=ref<OperacionSpot[]>([])
+const selectedSub=ref('')
+const opened=ref('')
+const page=ref(1)
+const pageSize=ref(10)
+const symbolFilter=ref('')
+const search=ref('')
+const busy=ref(false)
+const error=ref('')
+const partial=ref(false)
+const statusFilter=ref('')
+const fromDate=ref('')
+const toDate=ref('')
+const prices=ref<Record<string,{precio:number;cambio24h:number|null}>>({})
+const detail=ref<OperacionSpot|null>(null)
+let stopPrices:(()=>void)|undefined
+const money=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n)
+const subscription=(r:OperacionSpot)=>/^SUB#([^#]+)/i.exec(String(r.PK||''))?.[1]?.toLowerCase()||''
+const exchangeId=(r:OperacionSpot)=>String(r.exchangeId||'').trim().toLowerCase()
+const accountId=(r:OperacionSpot)=>String(r.accountId??r.account_id??'').trim()
+const num=(n:unknown,d=6)=>typeof n==='number'&&Number.isFinite(n)?n.toLocaleString('en-US',{maximumFractionDigits:d}):'—'
+const price=(o:OperacionSpot):number|null=>{void cotizacionesVivas.value;return cotizacionActual(String(o.symbol||''))?.precio??prices.value[String(o.symbol||'').toUpperCase()]?.precio??null}
+const investment=(o:OperacionSpot)=>Number(o.buyPrice)*Number(o.quantity)
+const valuation=(o:OperacionSpot)=>{const p=price(o),q=Number(o.quantity);return p!==null&&Number.isFinite(q)&&q>0?p*q:null}
+const pnl=(o:OperacionSpot)=>{const v=valuation(o),cost=investment(o);return v===null||!Number.isFinite(cost)||cost<=0?null:v-cost}
+const roi=(o:OperacionSpot)=>{const result=pnl(o),cost=investment(o);return result===null||cost<=0?null:result/cost*100}
+const tp=(o:OperacionSpot,n:number)=>{const v=Number(o[`tp${n}Price`]),q=Number(o[`tp${n}Quantity`]),purchase=Number(o.buyPrice);return Number.isFinite(v)&&v>0&&Number.isFinite(q)&&q>0&&Number.isFinite(purchase)&&purchase>0?(v-purchase)*q:null}
+const tpTotal=(o:OperacionSpot)=>{const values=[1,2,3].map(i=>tp(o,i));const has=values.some(x=>x!==null);const qty=[1,2,3].reduce((s,i)=>s+(Number(o[`tp${i}Quantity`])||0),0);return has&&qty<=Number(o.quantity)+1e-8?values.reduce<number>((s,v)=>s+(v||0),0):null}
+const date=(s:unknown)=>{const d=new Date(String(s||''));return Number.isNaN(d.getTime())?'—':d.toLocaleString('es-PE')}
+const users=computed(()=>[...new Set(rows.value.map(subscription).filter(Boolean))].sort())
+const visibleRows=computed(()=>rows.value.filter(r=>(esAdmin?(!selectedSub.value||subscription(r)===selectedSub.value):subscription(r)===propietario)))
+const accounts=computed(()=>{const ids=new Map<string,{key:string;name:string;exchange:string;account:string;count:number;capital:number}>();for(const r of visibleRows.value){const ex=exchangeId(r);if(!ex)continue;const acc=accountId(r)||'sin-cuenta';const key=ex+'|'+acc;if(!ids.has(key))ids.set(key,{key,name:ex+(acc==='sin-cuenta'?'':' · '+acc),exchange:ex,account:acc,count:0,capital:0});const entry=ids.get(key)!;entry.count++;if(String(r.side).toUpperCase()==='BUY'){const amount=Number(r.buyPrice)*Number(r.quantity);if(Number.isFinite(amount)&&amount>0)entry.capital+=amount}}return [...ids.values()].sort((a,b)=>b.count-a.count)})
+const activeAccount=computed(()=>accounts.value.find(a=>a.key===opened.value))
+const filtered=computed(()=>visibleRows.value.filter(r=>{const a=accounts.value.find(x=>x.key===opened.value);if(!a||exchangeId(r)!==a.exchange||(accountId(r)||'sin-cuenta')!==a.account)return false;if(symbolFilter.value&&String(r.symbol||'')!==symbolFilter.value)return false;if(statusFilter.value&&String(r.status||'')!==statusFilter.value)return false;if(fromDate.value&&String(r.createdAt||'').slice(0,10)<fromDate.value)return false;if(toDate.value&&String(r.createdAt||'').slice(0,10)>toDate.value)return false;const q=search.value.toLowerCase().trim();return !q||[r.symbol,r.side,subscription(r)].join(' ').toLowerCase().includes(q)}))
+const symbols=computed(()=>[...new Set(visibleRows.value.filter(r=>{const a=accounts.value.find(x=>x.key===opened.value);return a&&exchangeId(r)===a.exchange&&(accountId(r)||'sin-cuenta')===a.account}).map(r=>String(r.symbol||'')).filter(Boolean))].sort())
+const statuses=computed(()=>[...new Set(visibleRows.value.map(r=>String(r.status||'')).filter(Boolean))].sort())
+const pages=computed(()=>Math.max(1,Math.ceil(filtered.value.length/pageSize.value)))
+const currentRows=computed(()=>filtered.value.slice((page.value-1)*pageSize.value,page.value*pageSize.value))
+watch([opened,selectedSub,symbolFilter,statusFilter,fromDate,toDate,search,pageSize],()=>{page.value=1})
+watch(accounts,(list)=>{if(opened.value&&!list.some(x=>x.key===opened.value))opened.value=''})
+function expand(key:string){opened.value=opened.value===key?'':key;symbolFilter.value='';statusFilter.value='';fromDate.value='';toDate.value='';search.value='';page.value=1}
+async function load(){busy.value=true;error.value='';partial.value=false;try{let cursor='';const items:OperacionSpot[]=[];for(let i=0;i<10;i++){const r=await listarOperaciones({limite:'100',...(cursor?{cursor}:{})});items.push(...(r.operaciones||[]));if(r.parcial)partial.value=true;cursor=r.siguienteCursor||'';if(!cursor)break;if(i===9)partial.value=true}rows.value=items;stopPrices?.();stopPrices=items.length?observarCotizaciones([...new Set(items.map(o=>String(o.symbol||'').toUpperCase()).filter(Boolean))]):undefined;try{prices.value=await preciosDeMercado([...new Set(items.map(o=>String(o.symbol||'').toUpperCase()).filter(Boolean))])}catch{prices.value={}}}catch(e){error.value=e instanceof Error?e.message:'No se pudieron consultar las operaciones'}finally{busy.value=false}}
+async function openDetail(o:OperacionSpot){detail.value=o;try{const r=await detalleOperacion(o.PK,o.SK);if(r.operacion&&r.operacion.PK===o.PK&&r.operacion.SK===o.SK)detail.value=r.operacion}catch{/* conserva fila cargada */}}
+onMounted(()=>{void load()})
+onUnmounted(()=>{stopPrices?.()})
 </script>
 <template>
-  <section class="space-y-5 text-[#102c37]">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div><h1 class="text-2xl font-extrabold">Exchanges y operaciones</h1><p class="mt-1 text-sm text-slate-500">Plataformas identificadas a partir de las operaciones registradas en DynamoDB.</p></div>
-      <button class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" :disabled="cargando" @click="cargar">{{ cargando?'Consultando...':'↻ Actualizar registros' }}</button>
+ <main class="mx-auto flex min-h-[calc(100dvh-90px)] w-full max-w-[1650px] flex-col gap-4 px-3 pb-8 pt-2 text-slate-900 sm:px-6 lg:pb-10">
+  <header class="flex flex-wrap items-center justify-between gap-3"><div><h1 class="text-2xl font-extrabold">Exchanges</h1><p class="text-sm text-slate-500">Cuentas e historial de operaciones</p></div><button class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white" :disabled="busy" @click="load">{{busy?'Consultando…':'Actualizar'}}</button></header>
+  <p v-if="error" role="alert" class="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{{error}}</p>
+  <div v-if="esAdmin" class="rounded-xl border bg-white p-3"><label class="text-sm">Suscriptor<select v-model="selectedSub" class="ml-3 rounded-lg border px-3 py-2"><option value="">Todos</option><option v-for="u in users" :key="u" :value="u">{{u}}</option></select></label></div>
+  <p v-if="partial" class="text-xs text-amber-700">Historial parcial: solo se muestran los registros recibidos.</p>
+  <section class="flex flex-1 flex-col gap-5">
+    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <button v-for="a in accounts" :key="a.key" type="button" class="group flex min-h-[145px] flex-col justify-between rounded-2xl border bg-white p-5 text-left shadow-sm transition hover:border-emerald-400 hover:shadow-md" :class="opened===a.key?'border-emerald-500 ring-2 ring-emerald-100':'border-slate-200'" :aria-pressed="opened===a.key" @click="expand(a.key)">
+        <span class="flex items-start gap-3"><span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-50 font-bold uppercase text-emerald-800">{{a.exchange.slice(0,2)}}</span><span class="min-w-0"><strong class="block break-words capitalize">{{a.name}}</strong><small class="mt-1 block break-all text-slate-500">{{a.count}} registros · {{a.account==='sin-cuenta'?'Cuenta no identificada':a.account}}</small></span></span>
+        <span class="mt-4 flex items-end justify-between"><span><small class="block text-slate-500">Compras históricas</small><strong class="text-lg">{{money(a.capital)}}</strong></span><span class="text-sm font-semibold text-emerald-700">{{opened===a.key?'Ocultar historial ↑':'Ver historial ↓'}}</span></span>
+      </button>
     </div>
-    <p class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">Los importes son compras historicas registradas, NO saldos disponibles, valorizacion actual, ni sincronizacion bancaria. Las operaciones pueden estar paginadas o incompletas.</p>
-    <div v-if="esAdmin" class="rounded-xl border bg-white p-4"><label class="text-sm font-semibold" for="exchange-suscriptor">Vista administrativa · Suscriptor</label><select id="exchange-suscriptor" v-model="selector" class="mt-2 block w-full max-w-sm rounded-lg border p-2 text-sm"><option value="">Todos los suscriptores</option><option v-for="id in usuarios" :key="id" :value="id">{{ id }}</option></select><p class="mt-1 text-xs text-slate-500">Filtro del resumen cargado. La tabla de operaciones mantiene su propio filtro.</p></div>
-    <div class="grid gap-3 sm:grid-cols-3">
-      <article class="rounded-2xl border bg-white p-5"><p class="text-xs text-slate-500">Exchanges con operaciones</p><p class="text-2xl font-bold">{{ resumen.length }}</p></article>
-      <article class="rounded-2xl border bg-white p-5"><p class="text-xs text-slate-500">Registros consultados</p><p class="text-2xl font-bold">{{ mias.length }}</p></article>
-      <article class="rounded-2xl border bg-white p-5"><p class="text-xs text-slate-500">Compras historicas registradas</p><p class="text-2xl font-bold">{{ moneda(totalCompras) }}</p><p class="text-xs text-slate-500">No es balance disponible</p></article>
+    <article v-if="activeAccount" class="flex min-h-[500px] flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <header class="flex flex-wrap items-center justify-between gap-3 border-b bg-slate-50/60 px-5 py-4"><div><h2 class="text-lg font-bold">Historial de operaciones</h2><p class="text-sm text-slate-500">{{activeAccount.name}} · {{filtered.length}} registros cargados</p></div><button class="rounded-lg border bg-white px-3 py-2 text-sm" @click="opened=''">Cerrar ×</button></header>
+  <div class="flex flex-1 flex-col p-4 sm:p-5">
+    <div class="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+      <label class="text-xs">Símbolo<select v-model="symbolFilter" class="mt-1 block w-full rounded-lg border px-2 py-2 text-sm"><option value="">Todos</option><option v-for="s in symbols" :key="s">{{s}}</option></select></label>
+      <label class="text-xs">Estado<select v-model="statusFilter" class="mt-1 block w-full rounded-lg border px-2 py-2 text-sm"><option value="">Todos</option><option v-for="s in statuses" :key="s">{{s}}</option></select></label>
+      <label class="text-xs">Desde<input v-model="fromDate" type="date" class="mt-1 block w-full rounded-lg border px-2 py-2 text-sm"/></label>
+      <label class="text-xs">Hasta<input v-model="toDate" type="date" class="mt-1 block w-full rounded-lg border px-2 py-2 text-sm"/></label>
+      <label class="text-xs">Buscar<input v-model="search" class="mt-1 block w-full rounded-lg border px-2 py-2 text-sm" placeholder="Símbolo, tipo"/></label>
+      <label class="text-xs">Filas<select v-model.number="pageSize" class="mt-1 block w-full rounded-lg border px-2 py-2 text-sm"><option :value="5">5</option><option :value="10">10</option><option :value="20">20</option><option :value="50">50</option></select></label>
     </div>
-    <p v-if="error" role="alert" class="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{{ error }}</p>
-    <p v-if="parcial" role="status" class="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Consulta parcial: el resumen solo considera los registros recibidos (maximo 1000). No equivale a un total historico garantizado.</p>
-    <div class="flex gap-2 border-b pb-2"><button class="rounded-lg px-4 py-2 text-sm" :class="tab==='resumen'?'bg-emerald-600 text-white':'bg-white border'" @click="tab='resumen'">Mis exchanges</button><button class="rounded-lg px-4 py-2 text-sm" :class="tab==='operaciones'?'bg-emerald-600 text-white':'bg-white border'" @click="tab='operaciones'">Historial de operaciones</button></div>
-    <div v-if="tab==='resumen'">
-      <div v-if="!resumen.length" class="rounded-2xl border border-dashed bg-white p-10 text-center text-slate-500">No hay exchanges con operaciones registradas para esta seleccion.</div>
-      <div v-else class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <article v-for="r in resumen" :key="r.nombre" class="rounded-2xl border bg-white p-5 shadow-sm">
-          <div class="flex items-center justify-between"><div class="flex items-center gap-3"><div class="grid size-11 place-items-center rounded-xl bg-emerald-50 text-lg font-extrabold uppercase text-emerald-700">{{r.nombre.slice(0,1)}}</div><h2 class="text-lg font-bold capitalize">{{r.nombre}}</h2></div><span class="rounded-full bg-slate-100 px-2 py-1 text-[11px]">Sin API vinculada</span></div>
-          <p class="mt-4 text-xs text-slate-500">Compras historicas</p><p class="text-2xl font-bold">{{ moneda(r.comprasUsd) }}</p>
-          <p class="mt-2 text-xs text-slate-500">{{r.ordenes}} registros · {{r.simbolos.size}} pares distintos</p>
-          <p class="mt-1 break-words text-xs text-slate-500">{{ [...r.simbolos].join(', ') }}</p>
-          <button class="mt-4 w-full rounded-xl border border-emerald-300 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50" @click="abrir(r.nombre)">Configurar conexion API</button>
-        </article>
-      </div>
+    <div class="min-h-[300px] flex-1 overflow-auto rounded-xl border lg:min-h-[420px] lg:max-h-[calc(100dvh-435px)]">
+      <table class="min-w-[1550px] w-full text-left text-xs">
+        <thead class="sticky top-0 z-10 bg-slate-100"><tr><th v-for="h in ['Activo','Suscriptor','Fecha','Exchange','Tipo','Cantidad','P. compra','Invertido USD','P. mercado','Valor actual USD','PnL no realizado','ROI %','TP1 potencial','TP2 potencial','TP total potencial','Estado']" :key="h" class="whitespace-nowrap px-3 py-3">{{h}}</th></tr></thead>
+        <tbody><tr v-for="(r,i) in currentRows" :key="r.PK+'|'+r.SK+'|'+i" tabindex="0" class="cursor-pointer border-t hover:bg-emerald-50" @click="openDetail(r)" @keydown.enter.prevent="openDetail(r)">
+          <td class="px-3 py-3 font-bold text-emerald-700">{{r.symbol||'—'}}</td><td class="px-3 py-3">{{subscription(r)}}</td><td class="px-3 py-3 whitespace-nowrap">{{date(r.createdAt||r.date)}}</td><td class="px-3 py-3">{{r.exchangeId||'—'}}</td><td class="px-3 py-3">{{r.side||'—'}}</td><td class="px-3 py-3">{{num(r.quantity)}}</td><td class="px-3 py-3">{{money(Number(r.buyPrice)||0)}}</td><td class="px-3 py-3">{{money(investment(r)||0)}}</td><td class="px-3 py-3 bg-amber-50">{{price(r)===null?'—':money(price(r)!)}}</td><td class="px-3 py-3">{{valuation(r)===null?'—':money(valuation(r)!)}}</td><td class="px-3 py-3" :class="(pnl(r)||0)<0?'text-red-600':'text-emerald-700'">{{pnl(r)===null?'—':money(pnl(r)!)}}</td><td class="px-3 py-3">{{roi(r)===null?'—':num(roi(r),2)+'%'}}</td><td class="px-3 py-3">{{tp(r,1)===null?'—':money(tp(r,1)!)}}</td><td class="px-3 py-3">{{tp(r,2)===null?'—':money(tp(r,2)!)}}</td><td class="px-3 py-3">{{tpTotal(r)===null?'—':money(tpTotal(r)!)}}</td><td class="px-3 py-3">{{r.status||'—'}}</td>
+        </tr><tr v-if="!currentRows.length"><td colspan="16" class="p-5 text-center text-slate-500">Sin operaciones para los filtros seleccionados.</td></tr></tbody>
+      </table>
     </div>
-    <div v-else><OperacionesView /></div>
-    <div v-if="configurando" class="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/60 p-4" @click.self="cerrar">
-      <section role="dialog" aria-modal="true" aria-label="Configuracion de exchange" class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-        <div class="flex justify-between gap-3"><h2 class="text-xl font-bold">Configurar {{ configurando }}</h2><button aria-label="Cerrar" @click="cerrar">✕</button></div>
-        <p class="mt-2 text-sm text-slate-600">Conexion futura para consulta de operaciones y balances. No se habilitan ordenes, retiros ni trading automatico.</p>
-        <p class="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">DEMO: no introduzcas claves reales. Este formulario no las guarda ni envia. Una integracion real requiere un backend cifrado, autenticacion y claves de solo lectura, sin permiso de trading o retiro.</p>
-        <form class="mt-4 space-y-3" @submit.prevent="revisar"><label class="block text-sm">API_KEY<input v-model="apiKey" type="password" autocomplete="off" placeholder="Solo valor ficticio de prueba" class="mt-1 w-full rounded-lg border p-3" /></label><label class="block text-sm">SECRET_KEY<div class="mt-1 flex gap-2"><input v-model="secretKey" :type="mostrarSecreto?'text':'password'" autocomplete="off" placeholder="Solo valor ficticio de prueba" class="min-w-0 flex-1 rounded-lg border p-3" /><button type="button" class="rounded-lg border px-3 text-xs" @click="mostrarSecreto=!mostrarSecreto">{{mostrarSecreto?'Ocultar':'Ver'}}</button></div></label><p v-if="avisoDemo" role="status" class="rounded-lg bg-emerald-50 p-3 text-xs text-emerald-800">{{ avisoDemo }}</p><div class="flex justify-end gap-2"><button type="button" class="rounded-lg border px-4 py-2" @click="cerrar">Cerrar</button><button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white">Validar formulario (demo)</button></div></form>
-      </section>
-    </div>
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4 text-xs"><span>{{filtered.length}} registros · Página {{page}} de {{pages}}</span><div class="flex gap-2"><button class="rounded-lg border px-3 py-2 disabled:opacity-40" :disabled="page<=1" @click="page=Math.max(1,page-1)">← Anterior</button><button class="rounded-lg border px-3 py-2 disabled:opacity-40" :disabled="page>=pages" @click="page=Math.min(pages,page+1)">Siguiente →</button></div></div>
+  </div>
+    </article>
+    <p v-if="!accounts.length&&!busy" class="rounded-xl border bg-white p-5 text-sm text-slate-500">No se encontraron operaciones.</p>
   </section>
+    <div v-if="detail" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4" @click.self="detail=null"><section role="dialog" aria-modal="true" class="max-h-[85vh] w-full max-w-2xl overflow-auto rounded-2xl bg-white p-6"><div class="flex justify-between"><h3 class="text-lg font-bold">Detalle de operación · {{detail.symbol}}</h3><button class="rounded-lg border px-3 py-1" @click="detail=null">Cerrar</button></div><pre class="mt-4 overflow-x-auto rounded-xl bg-slate-100 p-4 text-xs">{{JSON.stringify(detail,null,2)}}</pre></section></div>
+ </main>
 </template>

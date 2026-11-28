@@ -16,7 +16,7 @@ const opcionesBase = [
   { ruta: '/auditoria', titulo: 'Auditoría', icono: '▤' },
 ]
 // Solo navegación visual: los permisos de API requieren autenticación y validación del servidor.
-const opciones = computed(() => opcionesBase.filter(o => (!['/configuracion', '/auditoria'].includes(o.ruta) || sesionDemo()?.rol === 'ADMIN') && (o.ruta !== '/mi-perfil' || sesionDemo()?.rol === 'SUBSCRIBER')))
+const opciones = computed(() => opcionesBase.filter(o => (!['/configuracion', '/auditoria'].includes(o.ruta) || sesionDemo()?.rol === 'ADMIN') && (!['/mi-perfil', '/billetera'].includes(o.ruta) || sesionDemo()?.rol === 'SUBSCRIBER')))
 </script>
 <template>
   <div v-if="abierto" class="fixed inset-0 z-30 bg-slate-950/40 lg:hidden" @click="emit('cerrar')" />
